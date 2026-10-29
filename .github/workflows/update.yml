@@ -1,0 +1,40 @@
+name: Update signal board
+
+on:
+  schedule:
+    # 11:15 UTC Tue–Sat (15:15 Mauritius), after the price dataset refreshes with the previous US close
+    - cron: "15 11 * * 2-6"
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build page from latest prices
+        run: |
+          mkdir -p site
+          bash scripts/update.sh site/index.html --standalone
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,421 @@
+<title>Nasdaq Signal Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: trading-desk board — status strip, signal table with a detail pane, then evidence (backtest, research, rules). */
+:root{
+  --bg:#f3f5f8; --panel:#ffffff; --ink:#132030; --ink-2:#4d5b6a; --ink-3:#7a8796; --line:#dde3ea; --line-2:#eef1f5;
+  --accent:#2747c9; --accent-soft:#e7ecfd;
+  --buy:#11733f; --buy-bg:#e2f3e9; --sell:#b8322f; --sell-bg:#fbe7e6; --wait:#9a6512; --wait-bg:#fbf0dc; --hold:#4d5b6a; --hold-bg:#eceff3;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --f-display:"Archivo Narrow","Arial Narrow",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f141b; --panel:#161d26; --ink:#e7ecf2; --ink-2:#a9b5c2; --ink-3:#7f8b99; --line:#283240; --line-2:#1d2530;
+  --accent:#7d98ff; --accent-soft:#1f2a4d;
+  --buy:#4fcf88; --buy-bg:#163626; --sell:#f08a86; --sell-bg:#3d1d1d; --wait:#e9b55b; --wait-bg:#3a2c14; --hold:#a9b5c2; --hold-bg:#232c37;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141b; --panel:#161d26; --ink:#e7ecf2; --ink-2:#a9b5c2; --ink-3:#7f8b99; --line:#283240; --line-2:#1d2530;
+  --accent:#7d98ff; --accent-soft:#1f2a4d;
+  --buy:#4fcf88; --buy-bg:#163626; --sell:#f08a86; --sell-bg:#3d1d1d; --wait:#e9b55b; --wait-bg:#3a2c14; --hold:#a9b5c2; --hold-bg:#232c37;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.005em}
+h1{font-size:clamp(30px,5vw,44px);font-weight:700;line-height:1.05}
+h2{font-size:26px;font-weight:700}
+h3{font-size:18px;font-weight:600}
+p{margin:0}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font:500 11.5px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.muted{color:var(--ink-2)}
+.small{font-size:13px}
+a{color:var(--accent)}
+button,label.btn{font:inherit}
+
+/* header */
+.top{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;border-bottom:2px solid var(--ink);padding-bottom:16px}
+.top .lede{max-width:62ch;margin-top:10px;color:var(--ink-2)}
+.regime{display:flex;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;min-width:0}
+.regime .big{font:600 22px/1 var(--f-display)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+@media (max-width:760px){.top{grid-template-columns:1fr}}
+
+/* summary strip */
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.strip>div{background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.strip .v{font:600 26px/1 var(--f-display)}
+@media (max-width:640px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* board */
+.board{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:980px){.board{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0}
+.panel-h{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--ink-2);border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.chip:focus-visible,.row:focus-visible,.btn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font:500 11px/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+th.r,td.r{text-align:right}
+.row{cursor:pointer}
+.row:hover{background:var(--line-2)}
+.row[aria-selected="true"]{background:var(--accent-soft)}
+.tk{font:600 15px/1.1 var(--f-display);letter-spacing:.02em}
+.nm{font-size:12px;color:var(--ink-3)}
+.pill{display:inline-flex;align-items:center;gap:6px;font:600 11.5px/1 var(--f-mono);letter-spacing:.06em;padding:5px 9px;border-radius:5px}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-buy{color:var(--buy);background:var(--buy-bg)} .p-sell{color:var(--sell);background:var(--sell-bg)} .p-wait{color:var(--wait);background:var(--wait-bg)} .p-hold{color:var(--hold);background:var(--hold-bg)}
+.scorebar{display:flex;align-items:center;gap:8px}
+.scorebar .t{width:64px;height:6px;background:var(--line-2);border-radius:3px;overflow:hidden;flex:none}
+.scorebar .f{height:100%;background:var(--ink-2);border-radius:3px}
+.pos{color:var(--buy)} .neg{color:var(--sell)}
+.tag{font:500 10px/1 var(--f-mono);border:1px solid var(--line);border-radius:3px;padding:2px 4px;color:var(--ink-3);margin-left:4px;vertical-align:2px}
+
+/* detail */
+.detail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:980px){.detail{position:static}}
+.d-body{padding:16px;display:flex;flex-direction:column;gap:16px}
+.d-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.d-head .px{font:600 30px/1 var(--f-display)}
+.levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.levels>div{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}
+.levels .v{font:500 16px/1 var(--f-mono)}
+.comp{display:flex;flex-direction:column;gap:9px}
+.comp-row{display:grid;grid-template-columns:132px minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:13px}
+.comp-row .t{height:8px;background:var(--line-2);border-radius:4px;overflow:hidden}
+.comp-row .f{height:100%;background:var(--accent);border-radius:4px}
+.comp-row .w{font:400 11px var(--f-mono);color:var(--ink-3)}
+.checks{display:flex;flex-wrap:wrap;gap:6px}
+.check{font-size:12px;border-radius:5px;padding:3px 8px;border:1px solid var(--line)}
+.check.ok{color:var(--buy);border-color:color-mix(in srgb,var(--buy) 35%,transparent)}
+.check.no{color:var(--sell);border-color:color-mix(in srgb,var(--sell) 35%,transparent)}
+svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)}
+.chart{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);font:12px/1.4 var(--f-mono);padding:6px 9px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-110%)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:2px;display:inline-block;border-radius:1px}
+.legend i.dash{background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 7px)!important;height:2px}
+
+/* sections */
+.sec{display:flex;flex-direction:column;gap:14px}
+.sec-h{display:flex;flex-direction:column;gap:6px;max-width:72ch}
+.bt{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
+@media (max-width:900px){.bt{grid-template-columns:1fr}}
+.stats td,.stats th{padding:8px 10px}
+.note{border-left:3px solid var(--wait);background:var(--wait-bg);padding:12px 14px;border-radius:0 8px 8px 0;font-size:13.5px;color:var(--ink)}
+.firms{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.firm{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.firm .who{font:500 12px/1.3 var(--f-mono);color:var(--ink-3)}
+.firm .took{font-size:13px;border-top:1px dashed var(--line);padding-top:8px;color:var(--ink-2)}
+.firm .took b{color:var(--ink);font-weight:600}
+.firm.x{opacity:.8}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.rule{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.rule ul{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px}
+.upl{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--panel);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px;font-weight:500}
+.btn input{position:absolute;opacity:0;width:1px;height:1px}
+.msg{font-size:13px}
+.foot{font-size:12.5px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:14px;max-width:90ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Systematic signals · Nasdaq leaders · Daily close <span id="asof"></span></div>
+      <h1 style="margin-top:8px">Nasdaq Signal Board</h1>
+      <p class="lede">A rules-based composite of the ideas leading quant funds publish and practise: trend following, 12-month momentum, relative strength, short-term mean reversion and volatility-based risk control. Every number is computed from daily prices on this page.</p>
+    </div>
+    <div class="regime" id="regime"></div>
+  </header>
+
+  <section class="strip" id="strip" aria-label="Summary"></section>
+
+  <section class="board">
+    <div class="panel">
+      <div class="panel-h">
+        <h3>Today's signals</h3>
+        <div class="chips" role="group" aria-label="Filter signals">
+          <button class="chip" id="f-all" data-f="all" aria-pressed="true">All</button>
+          <button class="chip" id="f-buy" data-f="buy" aria-pressed="false">Buy</button>
+          <button class="chip" id="f-hold" data-f="hold" aria-pressed="false">Hold</button>
+          <button class="chip" id="f-wait" data-f="wait" aria-pressed="false">Wait / Avoid</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Stock</th><th>Signal</th><th>Score</th><th class="r">Close</th><th class="r">12–1m mom.</th><th class="r">vs QQQ 3m</th><th class="r">RSI(2)</th><th class="r">Stop</th><th class="r">Size</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="panel-h" style="border-top:1px solid var(--line);border-bottom:0">
+        <div class="upl">
+          <label class="btn" for="csv">Analyse another stock (CSV)<input type="file" id="csv" accept=".csv,text/csv"></label>
+          <span class="msg muted" id="msg">Daily history from Yahoo Finance, Nasdaq.com or Stooq, at least 280 sessions.</span>
+        </div>
+      </div>
+    </div>
+    <aside class="panel detail" id="detail" aria-live="polite"></aside>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h">
+      <div class="eyebrow">Evidence</div>
+      <h2>Backtest: the same rules, applied daily since 2018</h2>
+      <p class="muted">Long-only portfolio of the 12 stocks. Signals at the close, positions held from the next session, inverse-volatility weights capped at 20%, exposure halved when QQQ is under its 200-day average, 10 bp cost on every change in weight.</p>
+    </div>
+    <div class="bt">
+      <div class="panel" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div class="legend" id="legend"></div>
+        <div class="chart" id="eqchart"></div>
+        <p class="small muted">Growth of $1, log scale. Hover for values.</p>
+      </div>
+      <div class="panel" style="padding:4px 0">
+        <div class="tbl-wrap"><table class="stats" id="stats"></table></div>
+      </div>
+    </div>
+    <p class="note" id="btnote"></p>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h">
+      <div class="eyebrow">Research</div>
+      <h2>What the top trading firms do, and what this model borrows</h2>
+      <p class="muted">The firms keep their exact models private. These summaries come from their published research, interviews and well-documented reporting; the note at the foot of each card says which part is replicable with daily prices.</p>
+    </div>
+    <div class="firms" id="firms"></div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h">
+      <div class="eyebrow">Rulebook</div>
+      <h2>How a signal is decided</h2>
+    </div>
+    <div class="rules" id="rules"></div>
+  </section>
+
+  <p class="foot">Educational research tool, not investment advice. Signals use end-of-day prices from a public GitHub dataset (yennanliu/finance_data) that mirrors exchange closes; check prices with your broker before acting. Past backtest results do not predict future returns.</p>
+</div>
+
+<script>
+__ENGINE__
+</script>
+<script>
+const DATA = __DATA__;
+const E = window.Engine;
+const $ = s => document.querySelector(s);
+const fmt = (v, d = 2) => v == null || isNaN(v) ? '–' : v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (v, d = 0, sign = true) => v == null || isNaN(v) ? '–' : (sign && v > 0 ? '+' : '') + (v * 100).toFixed(d) + '%';
+const cls = s => s.includes('BUY') ? 'p-buy' : s === 'SELL' || s === 'AVOID' ? 'p-sell' : s === 'WAIT' ? 'p-wait' : 'p-hold';
+const group = s => s.includes('BUY') ? 'buy' : s === 'HOLD' ? 'hold' : 'wait';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* Rebuild series and recompute signals in the browser with the shared engine */
+const toBars = a => a.map(([d, o, h, l, c]) => ({ d, o, h, l, c }));
+const SERIES = {}; for (const t in DATA.series) SERIES[t] = toBars(DATA.series[t]);
+const PREP = {}; for (const t in DATA.names) PREP[t] = E.prepare(SERIES[t]);
+const BENCH = E.prepare(SERIES.QQQ);
+const SNAP = E.snapshot(PREP, BENCH);
+let ROWS = SNAP.rows.map(r => ({ ...r, name: DATA.names[r.ticker] })).sort((a, b) => b.score - a.score);
+let filter = 'all', selected = (ROWS.find(r => r.signal.includes('BUY')) || ROWS[0]).ticker;
+
+function renderHeader() {
+  $('#asof').textContent = '· ' + new Date(SNAP.date + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const on = SNAP.regimeOn, gap = SNAP.bench.close / SNAP.bench.sma200 - 1;
+  $('#regime').innerHTML = `<span class="dot" style="background:var(${on ? '--buy' : '--sell'})"></span>
+    <div><div class="eyebrow">Market regime</div><div class="big" style="margin-top:4px">${on ? 'Risk-on' : 'Risk-off'}</div>
+    <div class="small muted">QQQ <span class="num">${fmt(SNAP.bench.close)}</span>, ${pct(gap, 1)} vs 200-day</div></div>`;
+  const n = g => ROWS.filter(r => group(r.signal) === g).length;
+  const top = ROWS[0];
+  $('#strip').innerHTML = [
+    ['Buy signals', n('buy'), 'Trend, momentum and score all pass'],
+    ['Hold / watch', n('hold'), 'One or more entry rules missing'],
+    ['Wait or avoid', n('wait'), 'Stop broken or below 200-day'],
+    ['Highest score', top.ticker + ' ' + top.score.toFixed(0), DATA.names[top.ticker] || 'Uploaded']
+  ].map(([k, v, s]) => `<div><span class="eyebrow">${k}</span><span class="v">${v}</span><span class="small muted">${s}</span></div>`).join('');
+}
+
+function renderRows() {
+  const list = ROWS.filter(r => filter === 'all' || group(r.signal) === filter);
+  $('#rows').innerHTML = list.map(r => `<tr class="row" tabindex="0" data-t="${esc(r.ticker)}" aria-selected="${r.ticker === selected}">
+    <td><div class="tk">${esc(r.ticker)}${r.uploaded ? '<span class="tag">CSV</span>' : ''}</div><div class="nm">${esc(r.name || '')}</div></td>
+    <td><span class="pill ${cls(r.signal)}">${r.signal}</span></td>
+    <td><div class="scorebar"><div class="t"><div class="f" style="width:${r.score}%"></div></div><span class="num">${r.score.toFixed(0)}</span></div></td>
+    <td class="r num">${fmt(r.close)}</td>
+    <td class="r num ${r.m12 > 0 ? 'pos' : 'neg'}">${pct(r.m12)}</td>
+    <td class="r num ${r.excess > 0 ? 'pos' : 'neg'}">${pct(r.excess, 1)}</td>
+    <td class="r num">${fmt(r.rsi2, 0)}</td>
+    <td class="r num">${fmt(r.stop)}</td>
+    <td class="r num">${r.posPct ? (r.posPct * 100).toFixed(0) + '%' : '–'}</td></tr>`).join('') || `<tr><td colspan="9" class="muted" style="padding:20px 12px">No stocks match this filter today.</td></tr>`;
+}
+
+function priceChart(t, r) {
+  const ind = PREP[t], n = ind.c.length, from = Math.max(200, n - 130);
+  const pts = []; for (let i = from; i < n; i++) pts.push({ d: ind.dates[i], c: ind.c[i], f: ind.sF[i], s: ind.sS[i] });
+  const W = 520, H = 230, L = 8, R = 58, T = 10, B = 22;
+  const vals = pts.flatMap(p => [p.c, p.f, p.s]).concat([r.stop]).filter(v => !isNaN(v));
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * .06; lo -= pad; hi += pad;
+  const x = i => L + i * (W - L - R) / (pts.length - 1), y = v => T + (hi - v) * (H - T - B) / (hi - lo);
+  const line = k => pts.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[k]).toFixed(1)).join('');
+  const ticks = [0, 1, 2, 3].map(k => lo + (hi - lo) * (k + .5) / 4);
+  const months = []; pts.forEach((p, i) => { if (i && p.d.slice(5, 7) !== pts[i - 1].d.slice(5, 7)) months.push([i, p.d]); });
+  const area = line('c') + `L${x(pts.length - 1)} ${H - B}L${x(0)} ${H - B}Z`;
+  return `<div class="legend small"><span><i style="background:var(--ink)"></i>Close</span><span><i style="background:var(--s1)"></i>50-day</span><span><i style="background:var(--s2)"></i>200-day</span><span style="color:var(--sell)"><i class="dash"></i>ATR stop</span></div>
+  <div class="chart" id="pc"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(t)} price, last ${pts.length} sessions">
+    ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line-2)"/><text x="${W - R + 6}" y="${y(v) + 3.5}">${fmt(v, v > 100 ? 0 : 2)}</text>`).join('')}
+    ${months.map(([i, d]) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { month: 'short' })}</text>`).join('')}
+    <path d="${area}" fill="var(--ink)" opacity=".05"/>
+    <path d="${line('s')}" fill="none" stroke="var(--s2)" stroke-width="2"/>
+    <path d="${line('f')}" fill="none" stroke="var(--s1)" stroke-width="2"/>
+    <path d="${line('c')}" fill="none" stroke="var(--ink)" stroke-width="2"/>
+    <line x1="${L}" x2="${W - R}" y1="${y(r.stop)}" y2="${y(r.stop)}" stroke="var(--sell)" stroke-dasharray="4 3" stroke-width="1.5"/>
+    <circle cx="${x(pts.length - 1)}" cy="${y(r.close)}" r="4" fill="var(--ink)" stroke="var(--panel)" stroke-width="2"/>
+    <line id="pcx" y1="${T}" y2="${H - B}" stroke="var(--ink-3)" stroke-width="1" visibility="hidden"/>
+    <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="pchit"/>
+  </svg><div class="tip" id="pctip" hidden></div></div>`;
+  // hover wired in bindPrice
+}
+function bindPrice(t) {
+  const ind = PREP[t], n = ind.c.length, from = Math.max(200, n - 130), cnt = n - from;
+  const svg = $('#pc svg'), hit = $('#pchit'), tip = $('#pctip'), vx = $('#pcx'); if (!svg) return;
+  const W = 520, L = 8, R = 58;
+  const move = e => {
+    const b = svg.getBoundingClientRect(), sx = (e.clientX - b.left) * W / b.width;
+    const k = Math.max(0, Math.min(cnt - 1, Math.round((sx - L) / ((W - L - R) / (cnt - 1))))), i = from + k;
+    const px = L + k * (W - L - R) / (cnt - 1);
+    vx.setAttribute('x1', px); vx.setAttribute('x2', px); vx.setAttribute('visibility', 'visible');
+    tip.hidden = false; tip.style.left = (px * b.width / W) + 'px'; tip.style.top = '28px';
+    tip.textContent = `${ind.dates[i]}  ${fmt(ind.c[i])}  50d ${fmt(ind.sF[i])}  200d ${fmt(ind.sS[i])}`;
+  };
+  hit.addEventListener('pointermove', move);
+  hit.addEventListener('pointerleave', () => { tip.hidden = true; vx.setAttribute('visibility', 'hidden'); });
+}
+
+function renderDetail() {
+  const r = ROWS.find(x => x.ticker === selected); if (!r) return;
+  const W = E.P.w, comps = [['Trend', r.trend, W.trend], ['Momentum', r.mom, W.mom], ['Rel. strength', r.rsx, W.rs], ['Pullback timing', r.timing, W.timing], ['Volatility', r.volS, W.vol]];
+  const checks = [['Above 200-day', r.trendBits[0]], ['50 > 200-day', r.trendBits[1]], ['Above 50-day', r.trendBits[2]], ['200-day rising', r.trendBits[3]], ['12–1m return > 0', r.m12 > 0], ['Beats QQQ (3m)', r.excess > 0], ['Above ATR stop', r.close >= r.stop]];
+  $('#detail').innerHTML = `<div class="panel-h"><div><div class="eyebrow">${esc(r.name || 'Uploaded CSV')}</div><h3 style="font-size:24px;margin-top:4px">${esc(r.ticker)}</h3></div><span class="pill ${cls(r.signal)}">${r.signal}</span></div>
+  <div class="d-body">
+    <div class="d-head"><div><div class="px num">${fmt(r.close)}</div><div class="small muted" style="margin-top:6px">${esc(r.why)}</div></div>
+      <div style="text-align:right"><div class="eyebrow">Composite</div><div class="px num">${r.score.toFixed(0)}<span class="small muted">/100</span></div></div></div>
+    <div class="levels">
+      <div><span class="eyebrow">Stop</span><span class="v">${fmt(r.stop)}</span><span class="small muted">${pct(r.stop / r.close - 1, 1)}</span></div>
+      <div><span class="eyebrow">Target 2R</span><span class="v">${r.target > r.close ? fmt(r.target) : '–'}</span><span class="small muted">${r.target > r.close ? pct(r.target / r.close - 1, 1) : 'n/a'}</span></div>
+      <div><span class="eyebrow">Size</span><span class="v">${r.posPct ? (r.posPct * 100).toFixed(0) + '%' : '–'}</span><span class="small muted">of capital, 1% risk</span></div>
+    </div>
+    ${PREP[r.ticker] ? priceChart(r.ticker, r) : ''}
+    <div class="comp">${comps.map(([k, v, w]) => `<div class="comp-row"><span>${k} <span class="w">${(w * 100).toFixed(0)}%</span></span><div class="t"><div class="f" style="width:${(v * 100).toFixed(0)}%"></div></div><span class="num small" style="text-align:right">${(v * 100).toFixed(0)}</span></div>`).join('')}</div>
+    <div class="checks">${checks.map(([k, ok]) => `<span class="check ${ok ? 'ok' : 'no'}">${ok ? '✓' : '✕'} ${k}</span>`).join('')}</div>
+  </div>`;
+  if (PREP[r.ticker]) bindPrice(r.ticker);
+}
+
+function select(t) { selected = t; renderRows(); renderDetail(); }
+$('#rows').addEventListener('click', e => { const tr = e.target.closest('.row'); if (tr) select(tr.dataset.t); });
+$('#rows').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('row')) { e.preventDefault(); select(e.target.dataset.t); } });
+document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+  filter = b.dataset.f; document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c === b)); renderRows();
+}));
+
+/* Equity curve */
+function renderBacktest() {
+  const bt = DATA.backtest, cv = bt.curve;
+  const S = [['Signal strategy', 1, 'var(--s1)', bt.strat], ['QQQ buy & hold', 2, 'var(--s2)', bt.qqq], ['12 stocks, equal-weight buy & hold', 3, 'var(--s3)', bt.ew]];
+  $('#legend').innerHTML = S.map(([n, , c]) => `<span><i style="background:${c}"></i>${n}</span>`).join('');
+  const W = 720, H = 300, L = 8, R = 48, T = 10, B = 24;
+  const all = cv.flatMap(p => [p[1], p[2], p[3]]), lo = Math.log(Math.min(...all) * .95), hi = Math.log(Math.max(...all) * 1.05);
+  const x = i => L + i * (W - L - R) / (cv.length - 1), y = v => T + (hi - Math.log(v)) * (H - T - B) / (hi - lo);
+  const ticks = [1, 2, 4, 8, 16].filter(v => Math.log(v) > lo && Math.log(v) < hi);
+  const years = []; cv.forEach((p, i) => { if (i && p[0].slice(0, 4) !== cv[i - 1][0].slice(0, 4)) years.push([i, p[0].slice(0, 4)]); });
+  const path = k => cv.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[k]).toFixed(1)).join('');
+  const last = cv.length - 1;
+  $('#eqchart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Growth of one dollar, strategy versus benchmarks">
+    ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line-2)"/><text x="${W - R + 6}" y="${y(v) + 3.5}">$${v}</text>`).join('')}
+    ${years.map(([i, yr]) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${yr}</text>`).join('')}
+    ${S.slice().reverse().map(([, k, c]) => `<path d="${path(k)}" fill="none" stroke="${c}" stroke-width="2"/>`).join('')}
+    ${S.map(([, k, c]) => `<circle cx="${x(last)}" cy="${y(cv[last][k])}" r="4" fill="${c}" stroke="var(--panel)" stroke-width="2"/>`).join('')}
+    <line id="eqx" y1="${T}" y2="${H - B}" stroke="var(--ink-3)" visibility="hidden"/>
+    <rect id="eqhit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>
+  </svg><div class="tip" id="eqtip" hidden></div>`;
+  const svg = $('#eqchart svg'), tip = $('#eqtip'), vx = $('#eqx');
+  $('#eqhit').addEventListener('pointermove', e => {
+    const b = svg.getBoundingClientRect(), sx = (e.clientX - b.left) * W / b.width;
+    const i = Math.max(0, Math.min(last, Math.round((sx - L) / ((W - L - R) / last)))), px = x(i);
+    vx.setAttribute('x1', px); vx.setAttribute('x2', px); vx.setAttribute('visibility', 'visible');
+    tip.hidden = false; tip.style.left = Math.min(Math.max(px * b.width / W, 110), b.width - 110) + 'px'; tip.style.top = '40px';
+    tip.innerHTML = `${cv[i][0]}<br>Strategy $${cv[i][1].toFixed(2)} · QQQ $${cv[i][2].toFixed(2)} · EW $${cv[i][3].toFixed(2)}`;
+  });
+  $('#eqhit').addEventListener('pointerleave', () => { tip.hidden = true; vx.setAttribute('visibility', 'hidden'); });
+  const rowsS = [['CAGR', 'cagr', v => pct(v, 1)], ['Total return', 'total', v => pct(v, 0)], ['Volatility', 'vol', v => pct(v, 1, false)], ['Sharpe (rf 0)', 'sharpe', v => v.toFixed(2)], ['Max drawdown', 'maxDD', v => pct(v, 1)]];
+  $('#stats').innerHTML = `<thead><tr><th></th><th class="r">Strategy</th><th class="r">QQQ</th><th class="r">EW 12</th></tr></thead><tbody>
+    ${rowsS.map(([n, k, f]) => `<tr><td>${n}</td><td class="r num"><b>${f(bt.strat[k])}</b></td><td class="r num">${f(bt.qqq[k])}</td><td class="r num">${f(bt.ew[k])}</td></tr>`).join('')}
+    <tr><td>Round-trip trades</td><td class="r num">${bt.trades}</td><td class="r muted">–</td><td class="r muted">–</td></tr>
+    <tr><td>Winning trades</td><td class="r num">${pct(bt.winRate, 0, false)}</td><td class="r muted">–</td><td class="r muted">–</td></tr>
+    <tr><td>Average invested</td><td class="r num">${pct(bt.avgExposure, 0, false)}</td><td class="r num">100%</td><td class="r num">100%</td></tr></tbody>`;
+  $('#btnote').innerHTML = `<b>Read this before trusting the numbers.</b> The 12 stocks were picked in ${DATA.asOf.slice(0, 4)} because they are today's leaders, so every column carries survivorship bias; the equal-weight line shows how large that bias is. The useful comparison is risk: the strategy earned ${pct(bt.strat.cagr, 1, false)} a year against ${pct(bt.qqq.cagr, 1, false)} for QQQ with a smaller worst drawdown (${pct(bt.strat.maxDD, 0)} vs ${pct(bt.qqq.maxDD, 0)}), while holding cash about ${pct(1 - bt.avgExposure, 0, false)} of the time. Only ${pct(bt.winRate, 0, false)} of trades win; that is normal for trend following, where a few large winners pay for many small stopped-out losses. Changing the stop from 2.5× to 4× ATR moved the CAGR between 20% and 26%, so the result does not hinge on one setting.`;
+}
+
+/* Research cards */
+const FIRMS = [
+  ['AQR · Man AHL · Winton', 'Systematic trend and momentum', 'Buy assets whose 12-month return is positive, short the rest, across many markets. AQR’s papers document this time-series momentum effect over a century of data, and cross-sectional momentum (owning the strongest names) inside equity books.', 'Took: 12-month return skipping the last month, cross-sectional rank across the 12 stocks, 200-day trend filter.'],
+  ['Renaissance Technologies', 'Short-horizon statistical patterns', 'Medallion is reported to run thousands of small, short-lived bets on price patterns, including short-term mean reversion, with heavy diversification and strict risk control. The real models and data are secret and not replicable.', 'Took: a 2-day RSI pullback used as entry timing, but only inside an established uptrend.'],
+  ['Two Sigma · D. E. Shaw', 'Many weak signals combined', 'Large machine-learning and factor models that blend hundreds of modest predictors, so no single indicator decides a trade.', 'Took: five independent components blended into one 0–100 score with fixed weights.'],
+  ['Citadel · Millennium (multi-manager)', 'Risk first, pods second', 'Portfolio managers work under hard loss limits and position caps; a manager who hits a drawdown limit is cut. Sizing is set by risk, not conviction.', 'Took: risk 1% of capital per trade, ATR trailing stop, 20% single-stock cap.'],
+  ['Bridgewater · volatility-targeting funds', 'Balance risk, not dollars', 'Risk-parity and vol-targeted strategies weight positions so each contributes similar risk, and cut exposure when volatility or the regime turns hostile.', 'Took: inverse-volatility weights and half exposure when QQQ is below its 200-day average.'],
+  ['O’Neil · Minervini-style growth traders', 'Relative strength leaders', 'Discretionary traders who buy stocks above a rising 200-day average that are outperforming the index, and sell quickly on breakdowns.', 'Took: 3-month return versus QQQ as the relative-strength component.'],
+  ['Citadel Securities · Jane Street · Virtu', 'Market making and arbitrage', 'They earn the bid-ask spread and pricing gaps using speed, order flow and exchange infrastructure measured in microseconds.', 'Not replicable with daily data, so the model leaves it out.']
+];
+$('#firms').innerHTML = FIRMS.map(([who, h, body, took], i) => `<div class="firm${i === FIRMS.length - 1 ? ' x' : ''}"><div class="who">${who}</div><h3>${h}</h3><p class="small muted">${body}</p><p class="took">${took.startsWith('Took:') ? '<b>Borrowed.</b> ' + took.slice(6) : '<b>Excluded.</b> ' + took}</p></div>`).join('');
+
+const RULES = [
+  ['Composite score (0–100)', ['Trend 30%: price above 50 and 200-day, 50 above 200, 200-day rising', 'Momentum 30%: 12–1 month and 6-month return positive, plus rank among peers', 'Relative strength 15%: 3-month return minus QQQ', 'Pullback timing 15%: lower 2-day RSI scores higher', 'Volatility 10%: calmer than its own 1-year norm scores higher']],
+  ['Entry', ['Market regime risk-on (QQQ above its 200-day average)', 'At least 3 of 4 trend checks pass', '12–1 month return above zero', 'Score of 65 or more → BUY', 'Same, with 2-day RSI under 20 → STRONG BUY']],
+  ['Exit and caution', ['Close under the 200-day average → SELL if held, AVOID if not', 'Close under the ATR stop (22-day high minus 3× ATR) → SELL, or WAIT if not held', 'Score under 35 → SELL', 'Everything else → HOLD with the missing rule named']],
+  ['Sizing', ['Risk 1% of capital between entry and stop', 'Size = 1% × price ÷ (price − stop), capped at 20%', 'Target shown at 2× the risk (2R)', 'Portfolio view uses inverse-volatility weights']]
+];
+$('#rules').innerHTML = RULES.map(([h, items]) => `<div class="rule"><h3>${h}</h3><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></div>`).join('');
+
+/* CSV upload: analyse any ticker with the same engine */
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/); const head = lines[0].toLowerCase().split(/[,;\t]/).map(s => s.replace(/["\s]/g, ''));
+  const ix = k => head.findIndex(h => h === k || h.startsWith(k));
+  const di = ix('date'), oi = ix('open'), hi = ix('high'), li = ix('low'), ci = head.indexOf('close') >= 0 ? head.indexOf('close') : ix('close');
+  if ([di, hi, li, ci].some(v => v < 0)) throw new Error('Needs Date, High, Low and Close columns.');
+  const num = s => +String(s).replace(/["$,]/g, '');
+  const toISO = s => { s = s.replace(/"/g, '').trim(); if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10); const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}` : null; };
+  const bars = lines.slice(1).map(l => l.split(/[,;\t](?=(?:[^"]*"[^"]*")*[^"]*$)/)).map(f => ({ d: toISO(f[di]), o: num(f[oi] ?? f[ci]), h: num(f[hi]), l: num(f[li]), c: num(f[ci]) }))
+    .filter(b => b.d && b.c > 0 && b.h > 0).sort((a, b) => a.d < b.d ? -1 : 1);
+  return bars;
+}
+$('#csv').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return; const msg = $('#msg');
+  try {
+    const bars = parseCSV(await f.text());
+    if (bars.length < 280) throw new Error(`Only ${bars.length} sessions found; the 12-month momentum and 200-day rules need at least 280.`);
+    const t = (f.name.replace(/\.[^.]+$/, '').match(/[A-Za-z.]{1,6}/) || ['NEW'])[0].toUpperCase();
+    const ind = E.prepare(bars), i = ind.c.length - 1, d = ind.dates[i];
+    const bi = BENCH.dateIx.get(d) ?? BENCH.dates.length - 1;
+    const { vals } = E.xsRanks(PREP, BENCH.dates[bi]);
+    const m12 = ind.c[i - E.P.momSkip] / ind.c[i - E.P.momLong] - 1;
+    const x = E.components(ind, i, E.rankAgainst(vals, m12), BENCH.dateIx.has(d) ? BENCH : null, BENCH.dateIx.has(d) ? bi : null);
+    const row = { ticker: t, name: 'Uploaded · last bar ' + d, uploaded: true, ...x, ...E.decide(x, E.riskOn(BENCH, bi), false) };
+    PREP[t] = ind; ROWS = ROWS.filter(r => r.ticker !== t).concat(row).sort((a, b) => b.score - a.score);
+    msg.textContent = `${t}: ${row.signal}, score ${row.score.toFixed(0)}.` + (BENCH.dateIx.has(d) ? '' : ' Its last date differs from QQQ’s, so relative strength was left neutral.');
+    filter = 'all'; document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.f === 'all'));
+    select(t); renderHeader();
+  } catch (err) { msg.textContent = 'Could not read that file. ' + err.message; }
+  e.target.value = '';
+});
+
+renderHeader(); renderRows(); renderDetail(); renderBacktest();
+</script>
