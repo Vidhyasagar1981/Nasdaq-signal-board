@@ -5,7 +5,8 @@
     smaFast: 50, smaSlow: 200, momLong: 252, momSkip: 21, momMid: 126, rs: 63,
     rsiShort: 2, atr: 22, chandMult: 3, volWin: 20,
     w: { trend: 0.30, mom: 0.30, rs: 0.15, timing: 0.15, vol: 0.10 },
-    buyScore: 65, exitScore: 35, riskPerTrade: 0.01, maxPos: 0.20
+    entryScore: 65, exitScore: 35, riskPerTrade: 0.01, maxPos: 0.20,
+    borrowBps: 50 // annual cost of borrowing shares to short
   };
 
   const closes = s => s.map(b => b.c);
@@ -45,7 +46,7 @@
   function prepare(series) {
     const c = closes(series), n = c.length;
     const ind = { c, rsi2: rsiSeries(c, P.rsiShort), atr: atrSeries(series, P.atr),
-      sF: new Array(n).fill(NaN), sS: new Array(n).fill(NaN), vol: new Array(n).fill(NaN), dates: series.map(b => b.d), hi: series.map(b => b.h) };
+      sF: new Array(n).fill(NaN), sS: new Array(n).fill(NaN), vol: new Array(n).fill(NaN), dates: series.map(b => b.d), hi: series.map(b => b.h), lo: series.map(b => b.l) };
     let tF = 0, tS = 0;
     for (let i = 0; i < n; i++) {
       tF += c[i]; tS += c[i];
@@ -76,30 +77,47 @@
     const vs = ind.vol.slice(Math.max(0, i - 251), i + 1).filter(v => !isNaN(v)).sort((a, b) => a - b);
     const med = vs[Math.floor(vs.length / 2)];
     const volS = Math.max(0, Math.min(1, 1 - (ind.vol[i] / med - 1)));
-    const score = 100 * (P.w.trend * trend + P.w.mom * mom + P.w.rs * rsx + P.w.timing * timing + P.w.vol * volS);
-    const hh = Math.max(...ind.hi.slice(i - P.atr + 1, i + 1));
-    const stop = hh - P.chandMult * ind.atr[i];
-    return { i, date: ind.dates[i], close: c[i], trend, trendBits, mom, m12, m6, rsx, excess, timing, rsi2: r2, volS, vol: ind.vol[i], score, stop, atr: ind.atr[i], sF: sF[i], sS: sS[i] };
+    // Long score: the bullish reading of each component. Short score: the exact mirror (volatility counts for both sides).
+    const longScore = 100 * (P.w.trend * trend + P.w.mom * mom + P.w.rs * rsx + P.w.timing * timing + P.w.vol * volS);
+    const momS = 0.35 * (m12 < 0 ? 1 : 0) + 0.15 * (m6 < 0 ? 1 : 0) + 0.5 * (1 - (xsRank ?? 0.5));
+    const shortScore = 100 * (P.w.trend * (1 - trend) + P.w.mom * momS + P.w.rs * (1 - rsx) + P.w.timing * (1 - timing) + P.w.vol * volS);
+    // Net bias from -100 (fully bearish) to +100 (fully bullish); the shared volatility term cancels out
+    const bias = (longScore - shortScore) / (1 - P.w.vol);
+    const hh = Math.max(...ind.hi.slice(i - P.atr + 1, i + 1)), ll = Math.min(...ind.lo.slice(i - P.atr + 1, i + 1));
+    const stopL = hh - P.chandMult * ind.atr[i], stopS = ll + P.chandMult * ind.atr[i];
+    return { i, date: ind.dates[i], close: c[i], trend, trendBits, mom, momS, m12, m6, rsx, excess, timing, rsi2: r2, volS, vol: ind.vol[i], longScore, shortScore, bias, stopL, stopS, atr: ind.atr[i], sF: sF[i], sS: sS[i] };
   }
 
   function riskOn(bench, bi) { return bench.c[bi] > bench.sS[bi]; }
 
-  /* Signal rules. held: whether currently in a position (for exit logic). */
-  function decide(x, regimeOn, held) {
-    const exitHit = x.close < x.sS || x.close < x.stop || x.score < P.exitScore;
-    const entryOk = regimeOn && x.trend >= 0.75 && x.m12 > 0 && x.score >= P.buyScore;
-    let signal, why;
-    if (exitHit) {
-      const below = x.close < x.sS;
-      signal = held ? 'SELL' : below ? 'AVOID' : 'WAIT';
-      why = below ? 'Below its 200-day average' : x.close < x.stop ? 'Fell through its ATR trailing stop; let it reset' : 'Composite score weak';
-    } else if (entryOk && x.rsi2 < 20) { signal = 'STRONG BUY'; why = 'Uptrend with a short-term pullback'; }
-    else if (entryOk) { signal = 'BUY'; why = x.rsi2 > 90 ? 'Trend and momentum aligned; short-term stretched, scale in' : 'Trend and momentum aligned'; }
-    else if (!regimeOn && x.trend >= 0.75) { signal = 'HOLD'; why = 'Strong stock, but market regime is risk-off'; }
-    else { signal = 'HOLD'; why = x.trend < 0.75 ? 'Trend not confirmed' : x.m12 <= 0 ? '12-month momentum negative' : 'Score below buy threshold'; }
-    const riskPerShare = x.close - x.stop;
-    const posPct = riskPerShare > 0 ? Math.min(P.maxPos, P.riskPerTrade * x.close / riskPerShare) : 0;
-    return { signal, why, target: x.close + 2 * riskPerShare, posPct: (signal.includes('BUY') ? posPct : 0) };
+  /* Signal rules. pos: current position (1 long, -1 short, 0 flat). Returns the signal for a flat book,
+     plus exitLong / exitShort flags used when a position is already held. */
+  function decide(x, regimeOn, pos = 0) {
+    const exitLong = x.close < x.sS || x.close < x.stopL || x.longScore < P.exitScore;
+    const exitShort = x.close > x.sS || x.close > x.stopS || x.shortScore < P.exitScore;
+    const longOk = regimeOn && x.trend >= 0.75 && x.close > x.sS && x.m12 > 0 && x.longScore >= P.entryScore && x.close > x.stopL;
+    const shortOk = x.trend <= 0.25 && x.close < x.sS && x.m12 < 0 && x.shortScore >= P.entryScore && x.close < x.stopS;
+    let signal, why, side = 0;
+    if (longOk) {
+      side = 1;
+      if (x.rsi2 < 20) { signal = 'STRONG LONG'; why = 'Uptrend with a short-term pullback'; }
+      else { signal = 'LONG'; why = x.rsi2 > 90 ? 'Trend and momentum up; short-term stretched, scale in' : 'Trend and momentum aligned up'; }
+    } else if (shortOk) {
+      side = -1;
+      if (x.rsi2 > 80) { signal = 'STRONG SHORT'; why = 'Downtrend with a short-term bounce to sell into'; }
+      else { signal = 'SHORT'; why = x.rsi2 < 10 ? 'Trend and momentum down; short-term oversold, scale in' : 'Trend and momentum aligned down'; }
+    } else {
+      signal = 'NEUTRAL';
+      if (x.trend >= 0.75) why = !regimeOn ? 'Uptrend, but market regime is risk-off' : x.close < x.stopL ? 'Uptrend, but just broke its long stop' : x.close <= x.sS ? 'Uptrend, but price is under the 200-day' : x.m12 <= 0 ? 'Uptrend, but 12-month momentum is negative' : 'Uptrend, but long score below ' + P.entryScore;
+      else if (x.trend <= 0.25) why = x.close > x.stopS ? 'Downtrend, but just broke above its short stop' : x.close >= x.sS ? 'Downtrend, but price is over the 200-day' : x.m12 >= 0 ? 'Downtrend, but 12-month momentum is positive' : 'Downtrend, but short score below ' + P.entryScore;
+      else why = 'Mixed trend; neither side confirmed';
+    }
+    // Shorts against a risk-on market and longs in a risk-off market are sized at half
+    const stop = side < 0 ? x.stopS : x.stopL;
+    const risk = side < 0 ? stop - x.close : x.close - stop;
+    let posPct = side && risk > 0 ? Math.min(P.maxPos, P.riskPerTrade * x.close / risk) : 0;
+    if (side < 0 && regimeOn) posPct /= 2;
+    return { signal, why, side, stop, target: side ? x.close + side * 2 * risk : NaN, posPct, exitLong, exitShort };
   }
 
   /* Cross-sectional ranks of 12-1 momentum on a date across a universe of prepared series. */
@@ -124,36 +142,54 @@
     return { date, regimeOn: on, bench: { close: bench.c[bi], sma200: bench.sS[bi] }, rows };
   }
 
-  /* Daily long-only portfolio backtest. Signals at close t, positions earn t+1 return. */
+  /* Daily portfolio backtest. Signals at close t, positions earn the t+1 return.
+     opts.sides: 'both' (long and short) or 'long'. */
   function backtest(prepared, bench, opts = {}) {
-    const cost = opts.costBps ?? 10, start = opts.start ?? null;
+    const cost = opts.costBps ?? 10, start = opts.start ?? null, both = (opts.sides ?? 'both') === 'both';
     const tick = Object.keys(prepared), dates = bench.dates;
-    let eq = 1, held = new Set(), w = {}, curve = [], trades = 0, wins = 0, entryPx = {}, expoSum = 0, n = 0;
+    let eq = 1, pos = {}, w = {}, curve = [], entryPx = {}, grossSum = 0, netSum = 0, n = 0;
+    const tr = { long: { n: 0, win: 0 }, short: { n: 0, win: 0 } };
+    let longPnl = 0, shortPnl = 0;
     for (let bi = P.momLong + 25; bi < dates.length - 1; bi++) {
       const d = dates[bi]; if (start && d < start) continue;
       const { ranks } = xsRanks(prepared, d); const on = riskOn(bench, bi);
-      const cand = {};
+      const raw = {};
       for (const t of tick) {
         const ind = prepared[t], i = ind.dateIx.get(d); if (i == null) continue;
         const x = components(ind, i, ranks[t], bench, bi); if (!x) continue;
-        const dec = decide(x, on, held.has(t));
-        if (held.has(t) && dec.signal === 'SELL') { held.delete(t); trades++; if (x.close > entryPx[t]) wins++; }
-        else if (!held.has(t) && dec.signal.includes('BUY')) { held.add(t); entryPx[t] = x.close; }
-        if (held.has(t)) cand[t] = 1 / Math.max(x.vol, 0.1);
+        const p = pos[t] || 0, dec = decide(x, on, p);
+        if (p === 1 && dec.exitLong) { pos[t] = 0; tr.long.n++; if (x.close > entryPx[t]) tr.long.win++; }
+        else if (p === -1 && dec.exitShort) { pos[t] = 0; tr.short.n++; if (x.close < entryPx[t]) tr.short.win++; }
+        else if (p === 0 && dec.side === 1) { pos[t] = 1; entryPx[t] = x.close; }
+        else if (p === 0 && dec.side === -1 && both) { pos[t] = -1; entryPx[t] = x.close; }
+        if (pos[t]) raw[t] = pos[t] / Math.max(x.vol, 0.1);
       }
-      // inverse-volatility weights, capped, scaled by regime
-      const tot = Object.values(cand).reduce((a, b) => a + b, 0); const nw = {};
-      for (const t in cand) nw[t] = Math.min(P.maxPos, cand[t] / tot);
-      const scale = on ? 1 : 0.5; for (const t in nw) nw[t] *= scale;
+      // inverse-volatility weights, capped; the side fighting the market regime runs at half size
+      const tot = Object.values(raw).reduce((a, b) => a + Math.abs(b), 0); const nw = {};
+      for (const t in raw) {
+        const side = Math.sign(raw[t]); let wt = Math.min(P.maxPos, Math.abs(raw[t]) / tot);
+        if ((side > 0 && !on) || (side < 0 && on)) wt *= 0.5;
+        nw[t] = side * wt;
+      }
       let turn = 0; for (const t of new Set([...Object.keys(w), ...Object.keys(nw)])) turn += Math.abs((nw[t] || 0) - (w[t] || 0));
       w = nw;
-      let r = 0; const nd = dates[bi + 1];
-      for (const t in w) { const ind = prepared[t], i = ind.dateIx.get(d), j = ind.dateIx.get(nd); if (i != null && j != null) r += w[t] * (ind.c[j] / ind.c[i] - 1); }
-      eq *= (1 + r - turn * cost / 1e4);
-      expoSum += Object.values(w).reduce((a, b) => a + b, 0); n++;
-      curve.push([nd, eq, Object.keys(w).length]);
+      let rL = 0, rS = 0, borrow = 0; const nd = dates[bi + 1];
+      for (const t in w) {
+        const ind = prepared[t], i = ind.dateIx.get(d), j = ind.dateIx.get(nd); if (i == null || j == null) continue;
+        const r = w[t] * (ind.c[j] / ind.c[i] - 1);
+        if (w[t] > 0) rL += r; else { rS += r; borrow += -w[t] * P.borrowBps / 1e4 / 252; }
+      }
+      const tc = turn * cost / 1e4;
+      eq *= (1 + rL + rS - borrow - tc);
+      longPnl += rL; shortPnl += rS - borrow;
+      const vals = Object.values(w);
+      grossSum += vals.reduce((a, b) => a + Math.abs(b), 0); netSum += vals.reduce((a, b) => a + b, 0); n++;
+      curve.push([nd, eq]);
     }
-    return { curve, trades, winRate: trades ? wins / trades : NaN, avgExposure: n ? expoSum / n : 0, held: [...held] };
+    const trades = tr.long.n + tr.short.n;
+    return { curve, trades, winRate: trades ? (tr.long.win + tr.short.win) / trades : NaN, tr,
+      avgGross: n ? grossSum / n : 0, avgNet: n ? netSum / n : 0, longPnl, shortPnl,
+      positions: Object.entries(pos).filter(([, v]) => v).map(([t, v]) => [t, v]) };
   }
 
   function stats(curve) {

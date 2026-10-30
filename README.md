@@ -1,6 +1,6 @@
 # Nasdaq Signal Board
 
-A static web page that scores 12 Nasdaq leaders (MSFT, NVDA, GOOG, AMZN, META, AVGO, TSLA, AMD, MU, INTC, MRVL, PLTR) with a composite trend / momentum / mean-reversion model, and shows signals, stops, position sizes and a backtest.
+A static web page that scores 12 Nasdaq leaders (MSFT, NVDA, GOOG, AMZN, META, AVGO, TSLA, AMD, MU, INTC, MRVL, PLTR) with a composite trend / momentum / mean-reversion model. Each stock gets a STRONG LONG, LONG, NEUTRAL, SHORT or STRONG SHORT signal with a stop, a 2R target and a position size, plus a long/short backtest against long-only and QQQ.
 
 GitHub rebuilds and republishes it every weekday from the latest daily closes. Prices come from the public dataset at https://github.com/yennanliu/finance_data.
 
