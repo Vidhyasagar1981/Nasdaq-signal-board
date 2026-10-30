@@ -3,24 +3,24 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: trading-desk board — status strip, long/short signal table with a detail pane, then evidence (backtest, research, rules). */
+/* Layout: trading-desk board — status strip, index-short hedge cards, stock signal table with detail pane, then evidence ($100k backtest, research, rules). */
 :root{
   --bg:#f3f5f8; --panel:#ffffff; --ink:#132030; --ink-2:#4d5b6a; --ink-3:#7a8796; --line:#dde3ea; --line-2:#eef1f5;
   --accent:#2747c9; --accent-soft:#e7ecfd;
-  --up:#11733f; --up-bg:#e2f3e9; --up-bar:#2f9a5f; --down:#b8322f; --down-bg:#fbe7e6; --down-bar:#d4524e; --flat:#4d5b6a; --flat-bg:#eceff3; --warn:#9a6512; --warn-bg:#fbf0dc;
-  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --up:#11733f; --up-bg:#e2f3e9; --down:#b8322f; --down-bg:#fbe7e6; --warn:#9a6512; --warn-bg:#fbf0dc; --flat:#4d5b6a; --flat-bg:#eceff3;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
   --f-display:"Archivo Narrow","Arial Narrow",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f141b; --panel:#161d26; --ink:#e7ecf2; --ink-2:#a9b5c2; --ink-3:#7f8b99; --line:#283240; --line-2:#1d2530;
   --accent:#7d98ff; --accent-soft:#1f2a4d;
-  --up:#4fcf88; --up-bg:#163626; --up-bar:#3fb878; --down:#f08a86; --down-bg:#3d1d1d; --down-bar:#e0625d; --flat:#a9b5c2; --flat-bg:#232c37; --warn:#e9b55b; --warn-bg:#3a2c14;
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70; color-scheme:dark}}
+  --up:#4fcf88; --up-bg:#163626; --down:#f08a86; --down-bg:#3d1d1d; --warn:#e9b55b; --warn-bg:#3a2c14; --flat:#a9b5c2; --flat-bg:#232c37;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f141b; --panel:#161d26; --ink:#e7ecf2; --ink-2:#a9b5c2; --ink-3:#7f8b99; --line:#283240; --line-2:#1d2530;
   --accent:#7d98ff; --accent-soft:#1f2a4d;
-  --up:#4fcf88; --up-bg:#163626; --up-bar:#3fb878; --down:#f08a86; --down-bg:#3d1d1d; --down-bar:#e0625d; --flat:#a9b5c2; --flat-bg:#232c37; --warn:#e9b55b; --warn-bg:#3a2c14;
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70; color-scheme:dark}
+  --up:#4fcf88; --up-bg:#163626; --down:#f08a86; --down-bg:#3d1d1d; --warn:#e9b55b; --warn-bg:#3a2c14; --flat:#a9b5c2; --flat-bg:#232c37;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
 .wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
@@ -48,11 +48,23 @@ button,label.btn{font:inherit}
 .strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .strip>div{background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
 .strip .v{font:600 26px/1 var(--f-display)}
-.strip .v.up{color:var(--up)} .strip .v.down{color:var(--down)}
 @media (max-width:640px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+/* index hedge cards */
+.hedge-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
+.idx{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.idx{grid-template-columns:1fr}}
+.icard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.icard.on{border-color:color-mix(in srgb,var(--down) 55%,var(--line));box-shadow:inset 3px 0 0 var(--down)}
+.icard .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.icard .px{font:600 26px/1 var(--f-display)}
+.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kv>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.kv .v{font:500 15px/1.1 var(--f-mono)}
+@media (max-width:460px){.kv{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 /* board */
-.board{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start}
+.board{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:20px;align-items:start}
 @media (max-width:1020px){.board{grid-template-columns:1fr}}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0}
 .panel-h{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
@@ -71,16 +83,11 @@ th.r,td.r{text-align:right}
 .tk{font:600 15px/1.1 var(--f-display);letter-spacing:.02em}
 .nm{font-size:12px;color:var(--ink-3)}
 .pill{display:inline-flex;align-items:center;gap:6px;font:600 11.5px/1 var(--f-mono);letter-spacing:.06em;padding:5px 9px;border-radius:5px}
-.pill .ar{font-size:10px}
-.p-long{color:var(--up);background:var(--up-bg)} .p-short{color:var(--down);background:var(--down-bg)} .p-flat{color:var(--flat);background:var(--flat-bg)}
-/* diverging bias bar: centre = neutral, right = bullish, left = bearish */
-.bias{display:flex;align-items:center;gap:8px}
-.bias .t{position:relative;width:88px;height:8px;background:var(--line-2);border-radius:4px;flex:none}
-.bias .t::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--ink-3)}
-.bias .f{position:absolute;top:0;bottom:0;border-radius:4px}
-.bias .f.up{background:var(--up-bar);left:50%}
-.bias .f.down{background:var(--down-bar);right:50%}
-.bias .n{min-width:34px;text-align:right}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-buy{color:var(--up);background:var(--up-bg)} .p-sell{color:var(--down);background:var(--down-bg)} .p-wait{color:var(--warn);background:var(--warn-bg)} .p-hold{color:var(--flat);background:var(--flat-bg)}
+.scorebar{display:flex;align-items:center;gap:8px}
+.scorebar .t{width:64px;height:6px;background:var(--line-2);border-radius:3px;overflow:hidden;flex:none}
+.scorebar .f{height:100%;background:var(--ink-2);border-radius:3px}
 .pos{color:var(--up)} .neg{color:var(--down)}
 .tag{font:500 10px/1 var(--f-mono);border:1px solid var(--line);border-radius:3px;padding:2px 4px;color:var(--ink-3);margin-left:4px;vertical-align:2px}
 
@@ -90,24 +97,20 @@ th.r,td.r{text-align:right}
 .d-body{padding:16px;display:flex;flex-direction:column;gap:16px}
 .d-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .d-head .px{font:600 30px/1 var(--f-display)}
-.sides{display:flex;gap:14px;text-align:right}
-.sides .v{font:600 24px/1 var(--f-display)}
 .levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .levels>div{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .levels .v{font:500 16px/1 var(--f-mono)}
 .comp{display:flex;flex-direction:column;gap:9px}
-.comp-ends{display:grid;grid-template-columns:132px minmax(0,1fr) 44px;gap:10px;font:500 10.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
-.comp-ends span:nth-child(2){display:flex;justify-content:space-between}
 .comp-row{display:grid;grid-template-columns:132px minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:13px}
-.comp-row .t{position:relative;height:8px;background:var(--line-2);border-radius:4px}
-.comp-row .t.div::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--ink-3)}
-.comp-row .f{position:absolute;top:0;bottom:0;border-radius:4px}
-.comp-row .f.up{background:var(--up-bar);left:50%} .comp-row .f.down{background:var(--down-bar);right:50%} .comp-row .f.q{background:var(--accent);left:0}
+.comp-row .t{height:8px;background:var(--line-2);border-radius:4px;overflow:hidden}
+.comp-row .f{height:100%;background:var(--accent);border-radius:4px}
 .comp-row .w{font:400 11px var(--f-mono);color:var(--ink-3)}
 .checks{display:flex;flex-wrap:wrap;gap:6px}
 .check{font-size:12px;border-radius:5px;padding:3px 8px;border:1px solid var(--line)}
-.check.up{color:var(--up);border-color:color-mix(in srgb,var(--up) 35%,transparent)}
-.check.down{color:var(--down);border-color:color-mix(in srgb,var(--down) 35%,transparent)}
+.check.ok{color:var(--up);border-color:color-mix(in srgb,var(--up) 35%,transparent)}
+.check.no{color:var(--down);border-color:color-mix(in srgb,var(--down) 35%,transparent)}
+.check.cond{color:var(--ink-2)}
+.check.cond.met{color:var(--down);border-color:color-mix(in srgb,var(--down) 35%,transparent)}
 svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)}
 .chart{position:relative}
 .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);font:12px/1.4 var(--f-mono);padding:6px 9px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-110%)}
@@ -119,12 +122,18 @@ svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)}
 /* sections */
 .sec{display:flex;flex-direction:column;gap:14px}
 .sec-h{display:flex;flex-direction:column;gap:6px;max-width:74ch}
-.bt{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
+.money{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.money{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.money>div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.money>div.main{border-color:var(--ink);box-shadow:inset 0 3px 0 var(--s1)}
+.money .lbl{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
+.money .lbl i{width:14px;height:3px;border-radius:2px;flex:none}
+.money .v{font:600 clamp(24px,3.2vw,32px)/1 var(--f-display)}
+.bt{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px}
 @media (max-width:900px){.bt{grid-template-columns:1fr}}
-.stats td,.stats th{padding:8px 10px}
+.stats td,.stats th{padding:8px 8px}
 .stats td.hl{background:var(--accent-soft)}
 .yrs td,.yrs th{padding:8px 10px}
-.yrs td.best{font-weight:600}
 .note{border-left:3px solid var(--warn);background:var(--warn-bg);padding:12px 14px;border-radius:0 8px 8px 0;font-size:13.5px;color:var(--ink);display:flex;flex-direction:column;gap:6px}
 .firms{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
 .firm{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
@@ -135,7 +144,7 @@ svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)}
 .rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
 .rule{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
 .rule ul{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px}
-.rule.up h3{color:var(--up)} .rule.down h3{color:var(--down)}
+.rule.down h3{color:var(--down)}
 .upl{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .btn{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--panel);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px;font-weight:500}
 .btn input{position:absolute;opacity:0;width:1px;height:1px}
@@ -147,29 +156,37 @@ svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)}
 <div class="wrap">
   <header class="top">
     <div>
-      <div class="eyebrow">Systematic long/short signals · Nasdaq leaders · Daily close <span id="asof"></span></div>
+      <div class="eyebrow">Systematic signals · Nasdaq leaders · Daily close <span id="asof"></span></div>
       <h1 style="margin-top:8px">Nasdaq Signal Board</h1>
-      <p class="lede">A rules-based model built from the ideas leading quant funds publish and practise: trend following, 12-month momentum, relative strength, short-term mean reversion and volatility-based risk control. It looks for long setups in rising stocks and short setups in falling ones, using the same rules turned upside down. Every number is computed from daily prices on this page.</p>
+      <p class="lede">A rules-based model built from the ideas leading quant funds publish and practise: trend following, 12-month momentum, relative strength, short-term mean reversion and volatility-based risk control. Stocks are bought, held or avoided, never shorted. Shorts are taken only on the Nasdaq-100 and S&amp;P 500, as a hedge when the broad market is in a downtrend.</p>
     </div>
     <div class="regime" id="regime"></div>
   </header>
 
   <section class="strip" id="strip" aria-label="Summary"></section>
 
+  <section class="sec" aria-labelledby="hedge-title">
+    <div class="hedge-h">
+      <h3 id="hedge-title">Index shorts (hedge)</h3>
+      <span class="small muted">Each short uses 25% of capital. VTI (US total market) stands in for the S&amp;P 500, which it tracks closely.</span>
+    </div>
+    <div class="idx" id="idx"></div>
+  </section>
+
   <section class="board">
     <div class="panel">
       <div class="panel-h">
-        <h3>Today's signals</h3>
+        <h3>Stock signals (long only)</h3>
         <div class="chips" role="group" aria-label="Filter signals">
           <button class="chip" id="f-all" data-f="all" aria-pressed="true">All</button>
-          <button class="chip" id="f-long" data-f="long" aria-pressed="false">Long</button>
-          <button class="chip" id="f-short" data-f="short" aria-pressed="false">Short</button>
-          <button class="chip" id="f-flat" data-f="flat" aria-pressed="false">Neutral</button>
+          <button class="chip" id="f-buy" data-f="buy" aria-pressed="false">Buy</button>
+          <button class="chip" id="f-hold" data-f="hold" aria-pressed="false">Hold</button>
+          <button class="chip" id="f-wait" data-f="wait" aria-pressed="false">Wait / Avoid</button>
         </div>
       </div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>Stock</th><th>Signal</th><th>Bias <span title="−100 fully bearish, +100 fully bullish">(−100 to +100)</span></th><th class="r">Close</th><th class="r">12–1m mom.</th><th class="r">vs QQQ 3m</th><th class="r">RSI(2)</th><th class="r">Stop</th><th class="r">Target</th><th class="r">Size</th></tr></thead>
+          <thead><tr><th>Stock</th><th>Signal</th><th>Score</th><th class="r">Close</th><th class="r">12–1m mom.</th><th class="r">vs QQQ 3m</th><th class="r">RSI(2)</th><th class="r">Stop</th><th class="r">Size</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
@@ -186,14 +203,15 @@ svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)}
   <section class="sec">
     <div class="sec-h">
       <div class="eyebrow">Evidence</div>
-      <h2>Backtest: long/short against long-only, daily since 2018</h2>
-      <p class="muted">The same rules run on the 12 stocks every day. Signals at the close, positions held from the next session, inverse-volatility weights capped at 20% a stock, the side that fights the market regime at half size, 10 bp cost on every change in weight and 0.5% a year to borrow shares for shorts.</p>
+      <h2 id="bt-title">What $100,000 would have become</h2>
+      <p class="muted" id="bt-lede"></p>
     </div>
+    <div class="money" id="money"></div>
     <div class="bt">
       <div class="panel" style="padding:16px;display:flex;flex-direction:column;gap:12px">
         <div class="legend" id="legend"></div>
         <div class="chart" id="eqchart"></div>
-        <p class="small muted">Growth of $1, log scale. Hover for values.</p>
+        <p class="small muted">Portfolio value, log scale. Hover for values.</p>
       </div>
       <div class="panel" style="padding:4px 0">
         <div class="tbl-wrap"><table class="stats" id="stats"></table></div>
@@ -222,7 +240,7 @@ svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)}
     <div class="rules" id="rules"></div>
   </section>
 
-  <p class="foot">Educational research tool, not investment advice. Short selling needs a margin account and shares available to borrow, and a short position's loss has no ceiling if the price keeps rising; always use the stop. Signals use end-of-day prices from a public GitHub dataset (yennanliu/finance_data) that mirrors exchange closes; check prices with your broker before acting. Past backtest results do not predict future returns.</p>
+  <p class="foot">Educational research tool, not investment advice. Shorting an index fund needs a margin account, and a short's loss has no ceiling if the market keeps rising; always use the stop. Signals use end-of-day prices from a public GitHub dataset (yennanliu/finance_data) that mirrors exchange closes; check prices with your broker before acting. Past backtest results do not predict future returns.</p>
 </div>
 
 <script>
@@ -234,81 +252,92 @@ const E = window.Engine;
 const $ = s => document.querySelector(s);
 const fmt = (v, d = 2) => v == null || isNaN(v) ? '–' : v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const pct = (v, d = 0, sign = true) => v == null || isNaN(v) ? '–' : (sign && v > 0 ? '+' : '') + (v * 100).toFixed(d) + '%';
-const sgn = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(0);
-const cls = s => s.includes('LONG') ? 'p-long' : s.includes('SHORT') ? 'p-short' : 'p-flat';
-const arrow = s => s.includes('LONG') ? '▲' : s.includes('SHORT') ? '▼' : '●';
-const group = s => s.includes('LONG') ? 'long' : s.includes('SHORT') ? 'short' : 'flat';
-const pill = s => `<span class="pill ${cls(s)}"><span class="ar" aria-hidden="true">${arrow(s)}</span>${s}</span>`;
+const usd = v => '$' + Math.round(v).toLocaleString('en-US');
+const usdK = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : '$' + Math.round(v / 1000) + 'k';
+const longDate = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const cls = s => s.includes('BUY') ? 'p-buy' : s === 'SELL' || s === 'AVOID' || s.includes('SHORT') && s !== 'NO SHORT' ? 'p-sell' : s === 'WAIT' ? 'p-wait' : 'p-hold';
+const group = s => s.includes('BUY') ? 'buy' : s === 'HOLD' ? 'hold' : 'wait';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const biasBar = b => `<div class="bias"><div class="t"><div class="f ${b >= 0 ? 'up' : 'down'}" style="width:${Math.min(50, Math.abs(b) / 2)}%"></div></div><span class="num n">${sgn(b)}</span></div>`;
 
 /* Rebuild series and recompute signals in the browser with the shared engine */
 const toBars = a => a.map(([d, o, h, l, c]) => ({ d, o, h, l, c }));
 const SERIES = {}; for (const t in DATA.series) SERIES[t] = toBars(DATA.series[t]);
 const PREP = {}; for (const t in DATA.names) PREP[t] = E.prepare(SERIES[t]);
-const BENCH = E.prepare(SERIES.QQQ);
+const IPREP = {}; for (const t in DATA.indexes) IPREP[t] = E.prepare(SERIES[t]);
+const BENCH = IPREP.QQQ;
 const SNAP = E.snapshot(PREP, BENCH);
-const sortRows = rs => rs.sort((a, b) => b.bias - a.bias);
-let ROWS = sortRows(SNAP.rows.map(r => ({ ...r, name: DATA.names[r.ticker] })));
-let filter = 'all';
-let selected = (ROWS.find(r => r.side === 1) || ROWS.slice().reverse().find(r => r.side === -1) || ROWS[0]).ticker;
+const IDX = Object.keys(DATA.indexes).map(t => { const I = IPREP[t], i = I.c.length - 1, x = E.components(I, i, 0.5, null, null); return { ticker: t, name: DATA.indexes[t], ...x, ...E.decideIndex(x, false) }; });
+let ROWS = SNAP.rows.map(r => ({ ...r, name: DATA.names[r.ticker] })).sort((a, b) => b.longScore - a.longScore);
+let filter = 'all', selected = (ROWS.find(r => r.signal.includes('BUY')) || ROWS[0]).ticker;
 
 function renderHeader() {
-  $('#asof').textContent = '· ' + new Date(SNAP.date + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  $('#asof').textContent = '· ' + longDate(SNAP.date);
   const on = SNAP.regimeOn, gap = SNAP.bench.close / SNAP.bench.sma200 - 1;
   $('#regime').innerHTML = `<span class="dot" style="background:var(${on ? '--up' : '--down'})"></span>
     <div><div class="eyebrow">Market regime</div><div class="big" style="margin-top:4px">${on ? 'Risk-on' : 'Risk-off'}</div>
-    <div class="small muted">QQQ <span class="num">${fmt(SNAP.bench.close)}</span>, ${pct(gap, 1)} vs 200-day · ${on ? 'shorts at half size' : 'longs paused, shorts full size'}</div></div>`;
+    <div class="small muted">QQQ <span class="num">${fmt(SNAP.bench.close)}</span>, ${pct(gap, 1)} vs 200-day</div></div>`;
   const n = g => ROWS.filter(r => group(r.signal) === g).length;
-  const hi = ROWS[0], lo = ROWS[ROWS.length - 1];
+  const shorts = IDX.filter(r => r.side === -1);
   $('#strip').innerHTML = [
-    ['Long signals', n('long'), 'Uptrend, momentum and long score pass', 'up'],
-    ['Short signals', n('short'), 'Downtrend, momentum and short score pass', 'down'],
-    ['Neutral', n('flat'), 'Trend mixed or a rule missing', ''],
-    ['Most bullish · bearish', `${hi.ticker} · ${lo.ticker}`, `Bias ${sgn(hi.bias)} · ${sgn(lo.bias)}`, '']
-  ].map(([k, v, s, c]) => `<div><span class="eyebrow">${k}</span><span class="v ${c}">${v}</span><span class="small muted">${s}</span></div>`).join('');
+    ['Buy signals', n('buy'), 'Trend, momentum and score all pass'],
+    ['Hold / watch', n('hold'), 'One or more entry rules missing'],
+    ['Wait or avoid', n('wait'), 'Stop broken or below 200-day'],
+    ['Index shorts on', `${shorts.length} of ${IDX.length}`, shorts.length ? shorts.map(r => r.ticker).join(', ') + ' in a downtrend' : 'Both indexes above their 200-day']
+  ].map(([k, v, s]) => `<div><span class="eyebrow">${k}</span><span class="v">${v}</span><span class="small muted">${s}</span></div>`).join('');
+}
+
+function renderIndexes() {
+  $('#idx').innerHTML = IDX.map(r => {
+    const on = r.side === -1;
+    const conds = [[r.close < r.sS, 'Below 200-day'], [r.sF < r.sS, '50-day under 200-day'], [r.m12 < 0, '12–1m return negative'], [r.close < r.stopS, 'Under short stop']];
+    return `<div class="icard${on ? ' on' : ''}">
+      <div class="row1"><div><div class="eyebrow">${esc(r.name)}</div><div class="px num" style="margin-top:6px">${fmt(r.close)}</div></div><span class="pill ${cls(r.signal)}">${r.signal}</span></div>
+      <p class="small muted">${esc(r.why)}</p>
+      <div class="kv">
+        <div><span class="eyebrow">vs 200-day</span><span class="v ${r.close >= r.sS ? 'pos' : 'neg'}">${pct(r.close / r.sS - 1, 1)}</span></div>
+        <div><span class="eyebrow">12–1m</span><span class="v ${r.m12 >= 0 ? 'pos' : 'neg'}">${pct(r.m12, 1)}</span></div>
+        <div><span class="eyebrow">${on ? 'Short stop' : 'Short stop ref.'}</span><span class="v">${fmt(r.stopS)}</span></div>
+        <div><span class="eyebrow">${on ? 'Target · size' : 'Size if fired'}</span><span class="v">${on ? fmt(r.target) + ' · ' : ''}${(E.P.hedgeW * 100).toFixed(0)}%</span></div>
+      </div>
+      <div class="checks" aria-label="Short conditions">${conds.map(([met, k]) => `<span class="check cond${met ? ' met' : ''}">${met ? '✓' : '○'} ${k}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderRows() {
   const list = ROWS.filter(r => filter === 'all' || group(r.signal) === filter);
   $('#rows').innerHTML = list.map(r => `<tr class="row" tabindex="0" data-t="${esc(r.ticker)}" aria-selected="${r.ticker === selected}">
     <td><div class="tk">${esc(r.ticker)}${r.uploaded ? '<span class="tag">CSV</span>' : ''}</div><div class="nm">${esc(r.name || '')}</div></td>
-    <td>${pill(r.signal)}</td>
-    <td>${biasBar(r.bias)}</td>
+    <td><span class="pill ${cls(r.signal)}">${r.signal}</span></td>
+    <td><div class="scorebar"><div class="t"><div class="f" style="width:${r.longScore}%"></div></div><span class="num">${r.longScore.toFixed(0)}</span></div></td>
     <td class="r num">${fmt(r.close)}</td>
     <td class="r num ${r.m12 > 0 ? 'pos' : 'neg'}">${pct(r.m12)}</td>
     <td class="r num ${r.excess > 0 ? 'pos' : 'neg'}">${pct(r.excess, 1)}</td>
     <td class="r num">${fmt(r.rsi2, 0)}</td>
-    <td class="r num">${r.side ? fmt(r.stop) : '–'}</td>
-    <td class="r num">${r.side ? fmt(r.target) : '–'}</td>
-    <td class="r num">${r.posPct ? (r.posPct * 100).toFixed(0) + '%' : '–'}</td></tr>`).join('') || `<tr><td colspan="10" class="muted" style="padding:20px 12px">No stocks match this filter today.</td></tr>`;
+    <td class="r num">${fmt(r.stopL)}</td>
+    <td class="r num">${r.posPct ? (r.posPct * 100).toFixed(0) + '%' : '–'}</td></tr>`).join('') || `<tr><td colspan="9" class="muted" style="padding:20px 12px">No stocks match this filter today.</td></tr>`;
 }
-
-/* Which stop to draw: the side of the signal, or the side the bias leans to when neutral */
-const chartSide = r => r.side || (r.bias >= 0 ? 1 : -1);
 
 function priceChart(t, r) {
   const ind = PREP[t], n = ind.c.length, from = Math.max(200, n - 130);
   const pts = []; for (let i = from; i < n; i++) pts.push({ d: ind.dates[i], c: ind.c[i], f: ind.sF[i], s: ind.sS[i] });
-  const side = chartSide(r), stop = side > 0 ? r.stopL : r.stopS;
   const W = 520, H = 230, L = 8, R = 58, T = 10, B = 22;
-  const vals = pts.flatMap(p => [p.c, p.f, p.s]).concat([stop]).filter(v => !isNaN(v));
+  const vals = pts.flatMap(p => [p.c, p.f, p.s]).concat([r.stopL]).filter(v => !isNaN(v));
   let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * .06; lo -= pad; hi += pad;
   const x = i => L + i * (W - L - R) / (pts.length - 1), y = v => T + (hi - v) * (H - T - B) / (hi - lo);
   const line = k => pts.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[k]).toFixed(1)).join('');
   const ticks = [0, 1, 2, 3].map(k => lo + (hi - lo) * (k + .5) / 4);
   const months = []; pts.forEach((p, i) => { if (i && p.d.slice(5, 7) !== pts[i - 1].d.slice(5, 7)) months.push([i, p.d]); });
   const area = line('c') + `L${x(pts.length - 1)} ${H - B}L${x(0)} ${H - B}Z`;
-  const stopName = side > 0 ? 'Long stop' : 'Short stop', stopVar = side > 0 ? '--up' : '--down';
-  return `<div class="legend small"><span><i style="background:var(--ink)"></i>Close</span><span><i style="background:var(--s1)"></i>50-day</span><span><i style="background:var(--s2)"></i>200-day</span><span style="color:var(${stopVar})"><i class="dash"></i>${stopName}${r.side ? '' : ' (reference)'}</span></div>
-  <div class="chart" id="pc"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(t)} price, last ${pts.length} sessions, with ${stopName.toLowerCase()}">
+  return `<div class="legend small"><span><i style="background:var(--ink)"></i>Close</span><span><i style="background:var(--s1)"></i>50-day</span><span><i style="background:var(--s2)"></i>200-day</span><span style="color:var(--down)"><i class="dash"></i>ATR stop</span></div>
+  <div class="chart" id="pc"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(t)} price, last ${pts.length} sessions">
     ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line-2)"/><text x="${W - R + 6}" y="${y(v) + 3.5}">${fmt(v, v > 100 ? 0 : 2)}</text>`).join('')}
     ${months.map(([i, d]) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { month: 'short' })}</text>`).join('')}
     <path d="${area}" fill="var(--ink)" opacity=".05"/>
     <path d="${line('s')}" fill="none" stroke="var(--s2)" stroke-width="2"/>
     <path d="${line('f')}" fill="none" stroke="var(--s1)" stroke-width="2"/>
     <path d="${line('c')}" fill="none" stroke="var(--ink)" stroke-width="2"/>
-    <line x1="${L}" x2="${W - R}" y1="${y(stop)}" y2="${y(stop)}" stroke="var(${stopVar})" stroke-dasharray="4 3" stroke-width="1.5"/>
+    <line x1="${L}" x2="${W - R}" y1="${y(r.stopL)}" y2="${y(r.stopL)}" stroke="var(--down)" stroke-dasharray="4 3" stroke-width="1.5"/>
     <circle cx="${x(pts.length - 1)}" cy="${y(r.close)}" r="4" fill="var(--ink)" stroke="var(--panel)" stroke-width="2"/>
     <line id="pcx" y1="${T}" y2="${H - B}" stroke="var(--ink-3)" stroke-width="1" visibility="hidden"/>
     <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="pchit"/>
@@ -329,40 +358,23 @@ function bindPrice(t) {
   hit.addEventListener('pointerleave', () => { tip.hidden = true; vx.setAttribute('visibility', 'hidden'); });
 }
 
-function compRow(label, w, v, diverging) {
-  if (!diverging) return `<div class="comp-row"><span>${label} <span class="w">${(w * 100).toFixed(0)}%</span></span><div class="t"><div class="f q" style="width:${(v * 100).toFixed(0)}%"></div></div><span class="num small" style="text-align:right">${(v * 100).toFixed(0)}</span></div>`;
-  const d = (v - 0.5) * 2;
-  return `<div class="comp-row"><span>${label} <span class="w">${(w * 100).toFixed(0)}%</span></span><div class="t div"><div class="f ${d >= 0 ? 'up' : 'down'}" style="width:${(Math.abs(d) * 50).toFixed(0)}%"></div></div><span class="num small ${d >= 0 ? 'pos' : 'neg'}" style="text-align:right">${sgn(d * 100)}</span></div>`;
-}
-
 function renderDetail() {
   const r = ROWS.find(x => x.ticker === selected); if (!r) return;
-  const W = E.P.w;
-  const checks = [
-    [r.trendBits[0], 'Above 200-day', 'Below 200-day'], [r.trendBits[1], '50 over 200-day', '50 under 200-day'],
-    [r.trendBits[2], 'Above 50-day', 'Below 50-day'], [r.trendBits[3], '200-day rising', '200-day falling'],
-    [r.m12 > 0, '12–1m return up', '12–1m return down'], [r.excess > 0, 'Beating QQQ (3m)', 'Lagging QQQ (3m)']];
-  const side = r.side, stop = side ? r.stop : NaN;
-  const sizeNote = side < 0 && SNAP.regimeOn ? 'half size: market risk-on' : 'of capital, 1% risk';
-  $('#detail').innerHTML = `<div class="panel-h"><div><div class="eyebrow">${esc(r.name || 'Uploaded CSV')}</div><h3 style="font-size:24px;margin-top:4px">${esc(r.ticker)}</h3></div>${pill(r.signal)}</div>
+  const W = E.P.w, comps = [['Trend', r.trend, W.trend], ['Momentum', r.mom, W.mom], ['Rel. strength', r.rsx, W.rs], ['Pullback timing', r.timing, W.timing], ['Volatility', r.volS, W.vol]];
+  const checks = [['Above 200-day', r.trendBits[0]], ['50 > 200-day', r.trendBits[1]], ['Above 50-day', r.trendBits[2]], ['200-day rising', r.trendBits[3]], ['12–1m return > 0', r.m12 > 0], ['Beats QQQ (3m)', r.excess > 0], ['Above ATR stop', r.close >= r.stopL]];
+  const buy = r.signal.includes('BUY');
+  $('#detail').innerHTML = `<div class="panel-h"><div><div class="eyebrow">${esc(r.name || 'Uploaded CSV')}</div><h3 style="font-size:24px;margin-top:4px">${esc(r.ticker)}</h3></div><span class="pill ${cls(r.signal)}">${r.signal}</span></div>
   <div class="d-body">
     <div class="d-head"><div style="min-width:0"><div class="px num">${fmt(r.close)}</div><div class="small muted" style="margin-top:6px">${esc(r.why)}</div></div>
-      <div class="sides"><div><div class="eyebrow">Long score</div><div class="v num pos">${r.longScore.toFixed(0)}</div></div><div><div class="eyebrow">Short score</div><div class="v num neg">${r.shortScore.toFixed(0)}</div></div></div></div>
+      <div style="text-align:right"><div class="eyebrow">Composite</div><div class="px num">${r.longScore.toFixed(0)}<span class="small muted">/100</span></div></div></div>
     <div class="levels">
-      <div><span class="eyebrow">${side < 0 ? 'Short stop' : side > 0 ? 'Long stop' : 'Stop'}</span><span class="v">${fmt(stop)}</span><span class="small muted">${side ? pct(stop / r.close - 1, 1) : 'no position'}</span></div>
-      <div><span class="eyebrow">Target 2R</span><span class="v">${side ? fmt(r.target) : '–'}</span><span class="small muted">${side ? pct(r.target / r.close - 1, 1) : 'no position'}</span></div>
-      <div><span class="eyebrow">Size</span><span class="v">${r.posPct ? (r.posPct * 100).toFixed(0) + '%' : '–'}</span><span class="small muted">${side ? sizeNote : 'no position'}</span></div>
+      <div><span class="eyebrow">Stop</span><span class="v">${fmt(r.stopL)}</span><span class="small muted">${pct(r.stopL / r.close - 1, 1)}</span></div>
+      <div><span class="eyebrow">Target 2R</span><span class="v">${buy ? fmt(r.target) : '–'}</span><span class="small muted">${buy ? pct(r.target / r.close - 1, 1) : 'buy signals only'}</span></div>
+      <div><span class="eyebrow">Size</span><span class="v">${r.posPct ? (r.posPct * 100).toFixed(0) + '%' : '–'}</span><span class="small muted">of capital, 1% risk</span></div>
     </div>
     ${PREP[r.ticker] ? priceChart(r.ticker, r) : ''}
-    <div class="comp">
-      <div class="comp-ends"><span></span><span><span>◀ Bearish</span><span>Bullish ▶</span></span><span></span></div>
-      ${compRow('Trend', W.trend, r.trend, true)}
-      ${compRow('Momentum', W.mom, r.mom, true)}
-      ${compRow('Rel. strength', W.rs, r.rsx, true)}
-      ${compRow('Swing timing', W.timing, r.timing, true)}
-      ${compRow('Calm volatility', W.vol, r.volS, false)}
-    </div>
-    <div class="checks">${checks.map(([ok, a, b]) => `<span class="check ${ok ? 'up' : 'down'}">${ok ? '▲ ' + a : '▼ ' + b}</span>`).join('')}</div>
+    <div class="comp">${comps.map(([k, v, w]) => `<div class="comp-row"><span>${k} <span class="w">${(w * 100).toFixed(0)}%</span></span><div class="t"><div class="f" style="width:${(v * 100).toFixed(0)}%"></div></div><span class="num small" style="text-align:right">${(v * 100).toFixed(0)}</span></div>`).join('')}</div>
+    <div class="checks">${checks.map(([k, ok]) => `<span class="check ${ok ? 'ok' : 'no'}">${ok ? '✓' : '✕'} ${k}</span>`).join('')}</div>
   </div>`;
   if (PREP[r.ticker]) bindPrice(r.ticker);
 }
@@ -374,22 +386,25 @@ document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () =
   filter = b.dataset.f; document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c === b)); renderRows();
 }));
 
-/* Equity curve, stats, yearly table */
+/* $100k backtest */
 function renderBacktest() {
-  const bt = DATA.backtest, cv = bt.curve, LS = bt.ls, LO = bt.lo;
-  const S = [['Long/short', 1, 'var(--s1)'], ['Long only', 2, 'var(--s3)'], ['QQQ buy & hold', 3, 'var(--s2)']];
-  $('#legend').innerHTML = S.map(([n, , c]) => `<span><i style="background:${c}"></i>${n}</span>`).join('');
-  const W = 720, H = 300, L = 8, R = 48, T = 10, B = 24;
-  const all = cv.flatMap(p => [p[1], p[2], p[3]]), lo = Math.log(Math.min(...all) * .95), hi = Math.log(Math.max(...all) * 1.05);
+  const bt = DATA.backtest, K = bt.capital, cv = bt.curve, st = bt.stats, fin = bt.final;
+  const S = [['Our setup: stocks long + index shorts', 1, 'var(--s1)', 'strat'], ['Stocks long only, no index shorts', 2, 'var(--s3)', 'lo'], ['QQQ buy & hold', 3, 'var(--s2)', 'qqq'], ['S&P 500 proxy (VTI) buy & hold', 4, 'var(--s4)', 'vti']];
+  $('#bt-title').textContent = `What ${usd(K)} invested on ${longDate(bt.start)} would be worth`;
+  $('#bt-lede').textContent = `Value at the ${longDate(bt.end)} close. The same rules applied every day: stocks bought on BUY and sold on SELL, inverse-volatility weights capped at 20% a stock and halved when QQQ is risk-off; QQQ and the S&P proxy shorted at 25% of capital each while their short rules hold. Costs: 10 bp on every change in weight, 0.5% a year to borrow the index funds. Nothing reinvested from outside, no tax.`;
+  $('#money').innerHTML = S.map(([n, , c, k], i) => `<div class="${i === 0 ? 'main' : ''}"><span class="lbl"><i style="background:${c}"></i>${n}</span><span class="v num">${usd(fin[k])}</span><span class="small muted">${pct(fin[k] / K - 1, 0)} total · ${pct(st[k].cagr, 1)} a year</span></div>`).join('');
+  $('#legend').innerHTML = S.map(([n, , c]) => `<span><i style="background:${c}"></i>${n.replace(', no index shorts', '')}</span>`).join('');
+  const W = 720, H = 300, L = 8, R = 56, T = 10, B = 24;
+  const all = cv.flatMap(p => [p[1], p[2], p[3], p[4]]), lo = Math.log(Math.min(...all) * .92), hi = Math.log(Math.max(...all) * 1.06);
   const x = i => L + i * (W - L - R) / (cv.length - 1), y = v => T + (hi - Math.log(v)) * (H - T - B) / (hi - lo);
-  const ticks = [0.5, 1, 2, 4, 8, 16].filter(v => Math.log(v) > lo && Math.log(v) < hi);
+  const ticks = [0.5, 1, 2, 3, 4, 6, 8].filter(v => Math.log(v) > lo && Math.log(v) < hi);
   const years = []; cv.forEach((p, i) => { if (i && p[0].slice(0, 4) !== cv[i - 1][0].slice(0, 4)) years.push([i, p[0].slice(0, 4)]); });
   const path = k => cv.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[k]).toFixed(1)).join('');
   const last = cv.length - 1;
-  $('#eqchart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Growth of one dollar: long/short, long only and QQQ">
-    ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line-2)"/><text x="${W - R + 6}" y="${y(v) + 3.5}">$${v}</text>`).join('')}
+  $('#eqchart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Value of ${usd(K)} over time for each approach">
+    ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line-2)"/><text x="${W - R + 6}" y="${y(v) + 3.5}">${usdK(v * K)}</text>`).join('')}
     ${years.map(([i, yr]) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${yr}</text>`).join('')}
-    ${S.slice().reverse().map(([, k, c]) => `<path d="${path(k)}" fill="none" stroke="${c}" stroke-width="2"/>`).join('')}
+    ${S.slice().reverse().map(([, k, c]) => `<path d="${path(k)}" fill="none" stroke="${c}" stroke-width="${k === 1 ? 2.5 : 2}"/>`).join('')}
     ${S.map(([, k, c]) => `<circle cx="${x(last)}" cy="${y(cv[last][k])}" r="4" fill="${c}" stroke="var(--panel)" stroke-width="2"/>`).join('')}
     <line id="eqx" y1="${T}" y2="${H - B}" stroke="var(--ink-3)" visibility="hidden"/>
     <rect id="eqhit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>
@@ -399,54 +414,55 @@ function renderBacktest() {
     const b = svg.getBoundingClientRect(), sx = (e.clientX - b.left) * W / b.width;
     const i = Math.max(0, Math.min(last, Math.round((sx - L) / ((W - L - R) / last)))), px = x(i);
     vx.setAttribute('x1', px); vx.setAttribute('x2', px); vx.setAttribute('visibility', 'visible');
-    tip.hidden = false; tip.style.left = Math.min(Math.max(px * b.width / W, 130), b.width - 130) + 'px'; tip.style.top = '40px';
-    tip.innerHTML = `${cv[i][0]}<br>Long/short $${cv[i][1].toFixed(2)} · Long only $${cv[i][2].toFixed(2)} · QQQ $${cv[i][3].toFixed(2)}`;
+    tip.hidden = false; tip.style.left = Math.min(Math.max(px * b.width / W, 120), b.width - 120) + 'px'; tip.style.top = '60px';
+    tip.innerHTML = `${cv[i][0]}<br>Our setup ${usd(cv[i][1] * K)}<br>Long only ${usd(cv[i][2] * K)}<br>QQQ ${usd(cv[i][3] * K)} · VTI ${usd(cv[i][4] * K)}`;
   });
   $('#eqhit').addEventListener('pointerleave', () => { tip.hidden = true; vx.setAttribute('visibility', 'hidden'); });
 
-  const rowsS = [['CAGR', 'cagr', v => pct(v, 1)], ['Total return', 'total', v => pct(v, 0)], ['Volatility', 'vol', v => pct(v, 1, false)], ['Sharpe (rf 0)', 'sharpe', v => v.toFixed(2)], ['Max drawdown', 'maxDD', v => pct(v, 1)]];
-  const wr = o => o.n ? pct(o.win / o.n, 0, false) : '–';
-  $('#stats').innerHTML = `<thead><tr><th></th><th class="r">Long/short</th><th class="r">Long only</th><th class="r">QQQ</th></tr></thead><tbody>
-    ${rowsS.map(([n, k, f]) => `<tr><td>${n}</td><td class="r num hl"><b>${f(LS.stats[k])}</b></td><td class="r num">${f(LO.stats[k])}</td><td class="r num">${f(bt.qqq[k])}</td></tr>`).join('')}
-    <tr><td>Long trades · won</td><td class="r num hl">${LS.tr.long.n} · ${wr(LS.tr.long)}</td><td class="r num">${LO.trades} · ${pct(LO.winRate, 0, false)}</td><td class="r muted">–</td></tr>
-    <tr><td>Short trades · won</td><td class="r num hl">${LS.tr.short.n} · ${wr(LS.tr.short)}</td><td class="r muted">–</td><td class="r muted">–</td></tr>
-    <tr><td>Avg gross exposure</td><td class="r num hl">${pct(LS.avgGross, 0, false)}</td><td class="r num">${pct(LO.avgGross, 0, false)}</td><td class="r num">100%</td></tr>
-    <tr><td>Avg net long</td><td class="r num hl">${pct(LS.avgNet, 0, false)}</td><td class="r num">${pct(LO.avgGross, 0, false)}</td><td class="r num">100%</td></tr></tbody>`;
+  const keys = ['strat', 'lo', 'qqq', 'vti'];
+  const rowsS = [['Final value', k => usd(fin[k])], ['CAGR', k => pct(st[k].cagr, 1)], ['Volatility', k => pct(st[k].vol, 1, false)], ['Sharpe (rf 0)', k => st[k].sharpe.toFixed(2)], ['Max drawdown', k => pct(st[k].maxDD, 1)]];
+  const h = bt.hedge.trades, hn = Object.values(h).reduce((a, b) => a + b.n, 0), hw = Object.values(h).reduce((a, b) => a + b.win, 0);
+  $('#stats').innerHTML = `<thead><tr><th></th><th class="r">Our setup</th><th class="r">Long only</th><th class="r">QQQ</th><th class="r">VTI</th></tr></thead><tbody>
+    ${rowsS.map(([n, f]) => `<tr><td>${n}</td>${keys.map((k, i) => `<td class="r num${i ? '' : ' hl'}">${i ? f(k) : '<b>' + f(k) + '</b>'}</td>`).join('')}</tr>`).join('')}
+    <tr><td>Stock trades · won</td><td class="r num hl">${bt.stocks.trades} · ${pct(bt.stocks.winRate, 0, false)}</td><td class="r num">same</td><td class="r muted">–</td><td class="r muted">–</td></tr>
+    <tr><td>Index shorts · won</td><td class="r num hl">${hn} · ${hn ? pct(hw / hn, 0, false) : '–'}</td><td class="r muted">–</td><td class="r muted">–</td><td class="r muted">–</td></tr>
+    <tr><td>Days with a short on</td><td class="r num hl">${pct(bt.hedge.share, 0, false)}</td><td class="r muted">–</td><td class="r muted">–</td><td class="r muted">–</td></tr></tbody>`;
 
-  const Y = bt.years;
-  const cell = v => `<td class="r num ${v >= 0 ? 'pos' : 'neg'}">${pct(v, 1)}</td>`;
+  const Y = bt.years, cell = v => `<td class="r num ${v >= 0 ? 'pos' : 'neg'}">${pct(v, 1)}</td>`;
   $('#yrs').innerHTML = `<thead><tr><th>Calendar year</th>${Y.map(r => `<th class="r">${r[0]}${r[0] === DATA.asOf.slice(0, 4) ? ' YTD' : ''}</th>`).join('')}</tr></thead><tbody>
-    <tr><td><b>Long/short</b></td>${Y.map(r => cell(r[1])).join('')}</tr>
+    <tr><td><b>Our setup</b></td>${Y.map(r => cell(r[1])).join('')}</tr>
     <tr><td>Long only</td>${Y.map(r => cell(r[2])).join('')}</tr>
     <tr><td>QQQ</td>${Y.map(r => cell(r[3])).join('')}</tr>
-    <tr><td class="muted">Shorts added</td>${Y.map(r => `<td class="r num muted">${(r[1] - r[2] >= 0 ? '+' : '−') + Math.abs((r[1] - r[2]) * 100).toFixed(1)} pts</td>`).join('')}</tr></tbody>`;
+    <tr><td>S&amp;P proxy (VTI)</td>${Y.map(r => cell(r[4])).join('')}</tr>
+    <tr><td class="muted">Index shorts added</td>${Y.map(r => `<td class="r num muted">${(r[1] - r[2] >= 0 ? '+' : '−') + Math.abs((r[1] - r[2]) * 100).toFixed(1)} pts</td>`).join('')}</tr></tbody>`;
 
-  // Honest read of the evidence, computed from the numbers above
-  const bestHedge = Y.reduce((a, r) => (r[1] - r[2] > a[1] - a[2] ? r : a), Y[0]);
-  const helped = Y.filter(r => r[1] > r[2]).map(r => r[0]);
-  $('#btnote').innerHTML = `<p><b>Read this before trading the short signals.</b> Adding shorts lowered the annual return from ${pct(LO.stats.cagr, 1, false)} (long only) to ${pct(LS.stats.cagr, 1, false)}, and the worst drawdown went from ${pct(LO.stats.maxDD, 0)} to ${pct(LS.stats.maxDD, 0)}. Only ${wr(LS.tr.short)} of short trades made money. Over 2018 to ${DATA.asOf.slice(0, 4)} these stocks mostly rose, and shorts that fight a rising market get stopped out often.</p>
-    <p>The shorts did their job as a hedge in falling markets. In ${bestHedge[0]} the long/short book made ${pct(bestHedge[1], 1)} while long only lost ${pct(bestHedge[2], 1)} and QQQ ${pct(bestHedge[3], 1)}. Shorts added return in ${helped.length ? helped.join(', ') : 'no year'}. Treat short signals as protection when the market turns, not as a separate source of profit, and take them at the half size shown while the regime is risk-on.</p>
-    <p>All figures carry survivorship bias: the 12 stocks were picked in ${DATA.asOf.slice(0, 4)} because they are today's leaders. That flatters the long side and makes shorting these particular names look worse than it would on a broader list that included stocks which later collapsed.</p>`;
+  // Peak-to-trough of our setup, in dollars
+  let pk = 0, pkd = '', worst = 0, wd = '', wpd = '', wpk = 0;
+  for (const p of cv) { if (p[1] > pk) { pk = p[1]; pkd = p[0]; } const dd = p[1] / pk - 1; if (dd < worst) { worst = dd; wd = p[0]; wpd = pkd; wpk = pk; } }
+  const diff = fin.strat - fin.lo;
+  $('#btnote').innerHTML = `<p><b>What the numbers say.</b> Following the setup, ${usd(K)} became ${usd(fin.strat)}, against ${usd(fin.qqq)} in QQQ and ${usd(fin.vti)} in the S&amp;P proxy. The roughest stretch ran from ${longDate(wpd)} to ${longDate(wd)}, when the account fell from about ${usd(wpk * K)} to ${usd(wpk * (1 + worst) * K)} (${pct(worst, 0)} on weekly closes).</p>
+    <p>The index shorts ${diff >= 0 ? 'added' : 'cost'} ${usd(Math.abs(diff))} over the period compared with running the stocks alone. They were switched on only ${pct(bt.hedge.share, 0, false)} of the time, and only ${pct(hw / hn, 0, false)} of the ${hn} short trades won: in 2022 the market fell in sharp legs with strong rallies between them, and those rallies kept hitting the short stop. The stock side protected the account more, by selling stocks as they broke their 200-day averages and halving exposure when QQQ was risk-off.</p>
+    <p>All figures carry survivorship bias: the 12 stocks were picked in ${DATA.asOf.slice(0, 4)} because they are today's leaders, which flatters the stock side. The index results are free of that bias.</p>`;
 }
 
 /* Research cards */
 const FIRMS = [
-  ['AQR · Man AHL · Winton', 'Systematic trend and momentum', 'Go long assets whose 12-month return is positive and short those whose return is negative, across many markets. AQR’s papers document this time-series momentum effect over a century of data, and cross-sectional momentum (long the strongest names, short the weakest) inside equity books.', 'Took: long positive and short negative 12–1 month trends, cross-sectional rank across the 12 stocks, 200-day trend filter on both sides.'],
-  ['Renaissance Technologies', 'Short-horizon statistical patterns', 'Medallion is reported to run thousands of small, short-lived long and short bets on price patterns, including short-term mean reversion, with heavy diversification and strict risk control. The real models and data are secret and not replicable.', 'Took: 2-day RSI as timing on both sides: buy pullbacks inside uptrends, short bounces inside downtrends.'],
-  ['Two Sigma · D. E. Shaw', 'Many weak signals combined', 'Large machine-learning and factor models that blend hundreds of modest predictors into market-neutral long/short books, so no single indicator decides a trade.', 'Took: five components blended into a long score and a mirror-image short score.'],
-  ['Citadel · Millennium (multi-manager)', 'Risk first, pods second', 'Long/short equity managers work under hard loss limits and position caps; a manager who hits a drawdown limit is cut. Sizing is set by risk, not conviction.', 'Took: risk 1% of capital per trade, ATR trailing stops for longs and shorts, 20% single-stock cap.'],
-  ['Bridgewater · volatility-targeting funds', 'Balance risk, not dollars', 'Risk-parity and vol-targeted strategies weight positions so each contributes similar risk, and cut exposure when volatility or the regime turns hostile.', 'Took: inverse-volatility weights; whichever side fights the QQQ regime runs at half size.'],
-  ['O’Neil · Minervini-style traders', 'Leaders and laggards', 'Discretionary traders buy stocks above a rising 200-day average that outperform the index, and short-sellers in the same school target former leaders breaking down below it.', 'Took: 3-month return versus QQQ: leaders score for longs, laggards for shorts.'],
+  ['AQR · Man AHL · Winton', 'Systematic trend and momentum', 'Go long assets whose 12-month return is positive and short those whose return is negative, across many markets. AQR’s papers document this time-series momentum effect over a century of data, and cross-sectional momentum (owning the strongest names) inside equity books.', 'Took: 12–1 month momentum and a cross-sectional rank to pick stocks, and the same time-series trend test on QQQ and the S&P 500 to decide when to short the index.'],
+  ['Renaissance Technologies', 'Short-horizon statistical patterns', 'Medallion is reported to run thousands of small, short-lived bets on price patterns, including short-term mean reversion, with heavy diversification and strict risk control. The real models and data are secret and not replicable.', 'Took: a 2-day RSI pullback used as entry timing, but only inside an established uptrend.'],
+  ['Two Sigma · D. E. Shaw', 'Many weak signals combined', 'Large machine-learning and factor models that blend hundreds of modest predictors, so no single indicator decides a trade.', 'Took: five independent components blended into one 0–100 score with fixed weights.'],
+  ['Citadel · Millennium (multi-manager)', 'Risk first, pods second', 'Portfolio managers work under hard loss limits and position caps, and many hedge market exposure with index shorts so their returns come from stock selection.', 'Took: 1% risk per trade, ATR trailing stops, 20% single-stock cap, and index shorts as the hedge instead of single-stock shorts.'],
+  ['Bridgewater · volatility-targeting funds', 'Balance risk, not dollars', 'Risk-parity and vol-targeted strategies weight positions so each contributes similar risk, and cut exposure when volatility or the regime turns hostile.', 'Took: inverse-volatility weights and half exposure when QQQ is below its 200-day average.'],
+  ['O’Neil · Minervini-style growth traders', 'Relative strength leaders', 'Discretionary traders who buy stocks above a rising 200-day average that are outperforming the index, and sell quickly on breakdowns.', 'Took: 3-month return versus QQQ as the relative-strength component.'],
   ['Citadel Securities · Jane Street · Virtu', 'Market making and arbitrage', 'They earn the bid-ask spread and pricing gaps using speed, order flow and exchange infrastructure measured in microseconds.', 'Not replicable with daily data, so the model leaves it out.']
 ];
 $('#firms').innerHTML = FIRMS.map(([who, h, body, took], i) => `<div class="firm${i === FIRMS.length - 1 ? ' x' : ''}"><div class="who">${who}</div><h3>${h}</h3><p class="small muted">${body}</p><p class="took">${took.startsWith('Took:') ? '<b>Borrowed.</b> ' + took.slice(6) : '<b>Excluded.</b> ' + took}</p></div>`).join('');
 
 const RULES = [
-  ['Scores', '', ['Long score (0–100): trend 30%, momentum 30%, relative strength 15%, pullback timing 15%, calm volatility 10%', 'Short score: the same five parts read the other way (downtrend, negative momentum, lagging QQQ, a short-term bounce), with volatility counted the same', 'Bias = long score minus short score, scaled from −100 to +100']],
-  ['Long entry', 'up', ['Market regime risk-on (QQQ above its 200-day average)', 'At least 3 of 4 trend checks bullish, price above the 200-day', '12–1 month return above zero', 'Long score 65 or more, price above the long stop → LONG', 'Same, with 2-day RSI under 20 → STRONG LONG']],
-  ['Short entry', 'down', ['Allowed in either regime; half size while QQQ is risk-on', 'At most 1 of 4 trend checks bullish, price below the 200-day', '12–1 month return below zero', 'Short score 65 or more, price below the short stop → SHORT', 'Same, with 2-day RSI over 80 → STRONG SHORT']],
-  ['Exits', '', ['Long: close under the 200-day, under the long stop (22-day high − 3× ATR), or long score under 35', 'Short: close over the 200-day, over the short stop (22-day low + 3× ATR), or short score under 35', 'Anything that fails to qualify is NEUTRAL, with the missing rule named']],
-  ['Sizing', '', ['Risk 1% of capital between entry and stop', 'Size = 1% × price ÷ distance to stop, capped at 20%', 'Target shown at 2× the risk (2R) in the trade’s direction', 'Backtest uses inverse-volatility weights and charges 0.5% a year to borrow shares']]
+  ['Stock score (0–100)', '', ['Trend 30%: price above 50 and 200-day, 50 above 200, 200-day rising', 'Momentum 30%: 12–1 month and 6-month return positive, plus rank among peers', 'Relative strength 15%: 3-month return minus QQQ', 'Pullback timing 15%: lower 2-day RSI scores higher', 'Volatility 10%: calmer than its own 1-year norm scores higher']],
+  ['Stock entry', '', ['Market regime risk-on (QQQ above its 200-day average)', 'At least 3 of 4 trend checks pass', '12–1 month return above zero', 'Score of 65 or more → BUY', 'Same, with 2-day RSI under 20 → STRONG BUY']],
+  ['Stock exit and caution', '', ['Close under the 200-day average → SELL if held, AVOID if not', 'Close under the ATR stop (22-day high minus 3× ATR) → SELL, or WAIT if not held', 'Score under 35 → SELL', 'Everything else → HOLD with the missing rule named']],
+  ['Index shorts (QQQ, S&P 500)', 'down', ['Short when the index is below its 200-day, the 50-day is below the 200-day, the 12–1 month return is negative and price is under the short stop', 'STRONG SHORT when that comes with a 2-day bounce (RSI(2) over 80)', 'Short stop: 22-day low plus 3× ATR', 'Cover on a close above the 200-day or above the short stop', '25% of capital in each index short']],
+  ['Sizing', '', ['Stocks: risk 1% of capital between entry and stop', 'Size = 1% × price ÷ (price − stop), capped at 20%', 'Target shown at 2× the risk (2R)', 'Portfolio view uses inverse-volatility weights']]
 ];
 $('#rules').innerHTML = RULES.map(([h, c, items]) => `<div class="rule ${c}"><h3>${h}</h3><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></div>`).join('');
 
@@ -472,14 +488,14 @@ $('#csv').addEventListener('change', async e => {
     const { vals } = E.xsRanks(PREP, BENCH.dates[bi]);
     const m12 = ind.c[i - E.P.momSkip] / ind.c[i - E.P.momLong] - 1;
     const x = E.components(ind, i, E.rankAgainst(vals, m12), same ? BENCH : null, same ? bi : null);
-    const row = { ticker: t, name: 'Uploaded · last bar ' + d, uploaded: true, ...x, ...E.decide(x, E.riskOn(BENCH, bi), 0) };
-    PREP[t] = ind; ROWS = sortRows(ROWS.filter(r => r.ticker !== t).concat(row));
-    msg.textContent = `${t}: ${row.signal}, bias ${sgn(row.bias)}.` + (same ? '' : ' Its last date differs from QQQ’s, so relative strength was left neutral.');
+    const row = { ticker: t, name: 'Uploaded · last bar ' + d, uploaded: true, ...x, ...E.decide(x, E.riskOn(BENCH, bi), false) };
+    PREP[t] = ind; ROWS = ROWS.filter(r => r.ticker !== t).concat(row).sort((a, b) => b.longScore - a.longScore);
+    msg.textContent = `${t}: ${row.signal}, score ${row.longScore.toFixed(0)}.` + (same ? '' : ' Its last date differs from QQQ’s, so relative strength was left neutral.');
     filter = 'all'; document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.f === 'all'));
     select(t); renderHeader();
   } catch (err) { msg.textContent = 'Could not read that file. ' + err.message; }
   e.target.value = '';
 });
 
-renderHeader(); renderRows(); renderDetail(); renderBacktest();
+renderHeader(); renderIndexes(); renderRows(); renderDetail(); renderBacktest();
 </script>

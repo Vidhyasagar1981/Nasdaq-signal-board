@@ -1,6 +1,6 @@
 # Nasdaq Signal Board
 
-A static web page that scores 12 Nasdaq leaders (MSFT, NVDA, GOOG, AMZN, META, AVGO, TSLA, AMD, MU, INTC, MRVL, PLTR) with a composite trend / momentum / mean-reversion model. Each stock gets a STRONG LONG, LONG, NEUTRAL, SHORT or STRONG SHORT signal with a stop, a 2R target and a position size, plus a long/short backtest against long-only and QQQ.
+A static web page that scores 12 Nasdaq leaders (MSFT, NVDA, GOOG, AMZN, META, AVGO, TSLA, AMD, MU, INTC, MRVL, PLTR) long only, with BUY / STRONG BUY / HOLD / WAIT / AVOID signals, stops and position sizes. Shorts are taken only on the Nasdaq-100 (QQQ) and the S&P 500 (VTI as proxy), as a trend-following hedge. A backtest shows what $100,000 invested in January 2020 would be worth under the setup.
 
 GitHub rebuilds and republishes it every weekday from the latest daily closes. Prices come from the public dataset at https://github.com/yennanliu/finance_data.
 
