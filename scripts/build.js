@@ -32,7 +32,7 @@ let prev = null; const years = [];
 for (const y of Object.keys(ends)) { const i = ends[y]; years.push([y, ...keys.map(k => +((prev == null ? C[k][i][1] : C[k][i][1] / C[k][prev][1]) - 1).toFixed(4))]); prev = i; }
 
 const out = {
-  asOf: snap.date, regime: { on: snap.regimeOn, ...snap.bench },
+  asOf: snap.date, updatedAt: new Date().toISOString(), regime: { on: snap.regimeOn, ...snap.bench },
   params: E.P, names: UNIVERSE, indexes: INDEXES,
   backtest: {
     start: base, end: strat.curve[strat.curve.length - 1][0], capital: CAPITAL,
