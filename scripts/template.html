@@ -150,6 +150,11 @@ svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)}
 .btn input{position:absolute;opacity:0;width:1px;height:1px}
 .msg{font-size:13px}
 .foot{font-size:12.5px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:14px;max-width:90ch}
+.fresh{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:12px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:8px;width:fit-content;max-width:100%}
+.fresh>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fresh .fv{font:500 14px/1.2 var(--f-mono)}
+.fstat{font:600 12px/1 var(--f-mono);letter-spacing:.04em;padding:5px 9px;border-radius:5px;width:fit-content}
+.fstat.ok{color:var(--up);background:var(--up-bg)} .fstat.warn{color:var(--warn);background:var(--warn-bg)} .fstat.bad{color:var(--down);background:var(--down-bg)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -158,6 +163,7 @@ svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)}
     <div>
       <div class="eyebrow">Systematic signals · Nasdaq leaders · Daily close <span id="asof"></span></div>
       <h1 style="margin-top:8px">Nasdaq Signal Board</h1>
+      <div class="fresh" id="fresh" aria-label="Data freshness"></div>
       <p class="lede">A rules-based model built from the ideas leading quant funds publish and practise: trend following, 12-month momentum, relative strength, short-term mean reversion and volatility-based risk control. Stocks are bought, held or avoided, never shorted. Shorts are taken only on the Nasdaq-100 and S&amp;P 500, as a hedge when the broad market is in a downtrend.</p>
     </div>
     <div class="regime" id="regime"></div>
@@ -270,8 +276,31 @@ const IDX = Object.keys(DATA.indexes).map(t => { const I = IPREP[t], i = I.c.len
 let ROWS = SNAP.rows.map(r => ({ ...r, name: DATA.names[r.ticker] })).sort((a, b) => b.longScore - a.longScore);
 let filter = 'all', selected = (ROWS.find(r => r.signal.includes('BUY')) || ROWS[0]).ticker;
 
+/* Freshness bar: today's date (viewer's clock), the price date and when the page was rebuilt.
+   The dataset carries the previous US close; it usually lands by ~12:00 UTC the next day. */
+function renderFresh() {
+  const now = new Date(), D = 864e5;
+  const ymd = t => new Date(t).toISOString().slice(0, 10);
+  const isWk = t => { const w = new Date(t).getUTCDay(); return w > 0 && w < 6; };
+  // Latest US close we should already have: the last weekday before today (UTC), or one before that if it's before 13:00 UTC
+  let t = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - D;
+  if (now.getUTCHours() < 13) t -= D;
+  while (!isWk(t)) t -= D;
+  const expected = ymd(t);
+  let behind = 0; for (let k = Date.parse(SNAP.date + 'T00:00:00Z') + D; k <= t; k += D) if (isWk(k)) behind++;
+  const st = behind === 0 ? ['ok', 'Up to date'] : behind === 1 ? ['warn', '1 trading day behind'] : ['bad', behind + ' trading days behind'];
+  const today = now.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const built = DATA.updatedAt ? new Date(DATA.updatedAt).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }) : '—';
+  $('#fresh').innerHTML = `
+    <div><span class="eyebrow">Today</span><span class="fv">${today}</span></div>
+    <div><span class="eyebrow">Prices as of</span><span class="fv">${longDate(SNAP.date)} close</span></div>
+    <div><span class="eyebrow">Page rebuilt</span><span class="fv">${built}</span></div>
+    <div><span class="eyebrow">Freshness</span><span class="fstat ${st[0]}" title="Expected latest close: ${longDate(expected)}. US market holidays can show as a false 'behind'.">${st[1]}</span></div>`;
+}
+
 function renderHeader() {
   $('#asof').textContent = '· ' + longDate(SNAP.date);
+  renderFresh();
   const on = SNAP.regimeOn, gap = SNAP.bench.close / SNAP.bench.sma200 - 1;
   $('#regime').innerHTML = `<span class="dot" style="background:var(${on ? '--up' : '--down'})"></span>
     <div><div class="eyebrow">Market regime</div><div class="big" style="margin-top:4px">${on ? 'Risk-on' : 'Risk-off'}</div>
